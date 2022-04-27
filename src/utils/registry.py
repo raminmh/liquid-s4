@@ -41,6 +41,7 @@ layer = {
     "lssl": "src.models.sequence.ss.lssl.LSSL",
     "s4": "src.models.sequence.ss.s4.S4",
     "standalone": "src.models.sequence.ss.standalone.s4.S4",
+    "simple": "src.models.sequence.ss.standalone.s4_simple.S4",
     "ff": "src.models.sequence.ff.FF",
     "rnn": "src.models.sequence.rnns.rnn.RNN",
     "mha": "src.models.sequence.mha.MultiheadAttention",

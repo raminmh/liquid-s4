@@ -1,0 +1,19 @@
+_name_: simple
+d_state: 64
+channels: 1
+bidirectional: false
+activation: gelu
+postact: null
+dropout: ${..dropout} # Same as null
+measure: legs
+dt_min: 0.001
+dt_max: 0.1
+trainable:
+    dt: true
+    A: true
+    P: true
+    B: true
+lr: 0.001
+mode: nplr
+l_max: ${oc.select:dataset.__l_max,1} # Grab dataset length if exists, otherwise set to 1 and kernel will automatically resize
+verbose: false
