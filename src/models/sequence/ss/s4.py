@@ -14,6 +14,8 @@ from einops import rearrange, repeat
 from omegaconf import DictConfig
 import opt_einsum as oe
 import numpy as np
+import itertools
+import time
 
 optimized = True
 
@@ -22,7 +24,7 @@ if optimized:
 else:
     contract = torch.einsum
 
-from src.models.sequence.ss.kernel import HippoSSKernel
+from src.models.sequence.ss.kernel import HippoSSKernel, _conj
 from src.models.nn import LinearActivation, Activation, Normalization
 
 class S4(nn.Module):
@@ -151,6 +153,62 @@ class S4(nn.Module):
 
         # Compute D term in state space equation - essentially a skip connection
         y = y + contract('bhl,ch->bchl', u, self.D) # u.unsqueeze(-3) * self.D.unsqueeze(-1)
+
+        
+        pp = 2
+        seq_len = 40
+        ind = range(0,seq_len,1)
+        comb = []
+        for comb_length in range(2,pp+1,1):
+            # compute all combination of ind:
+            comb.extend(list(itertools.combinations(ind,comb_length)))
+        
+        comb = torch.tensor(comb).to(u.device)
+        # pick the last seq_len enteries of u:
+        u_f = u[..., -seq_len:].to(u.device)
+        #print(f"u_f: {u.size()}")  
+
+        u_f_corr = torch.zeros(u_f.shape[0],u_f.shape[1], len(comb)).to(u.device)
+        u_f_corr[..., :] = u_f[..., comb[:,0]] * u_f[..., comb[:,1]]   
+        
+        us = torch.flip(u_f_corr, [-1]).to(u.device)
+        
+
+        # pad us with zeros until it is the same size as y:
+        us = F.pad(us, (0, u.size(-1) - us.size(-1)))
+        
+        #print(f"u_f_corr: {u_f_corr.size()}")
+        
+        # pad zeroes al
+        #us = torch.nn.functional.pad(u[..., :-1], (1, 0), "constant", 0)
+        #us = us * u
+
+         
+        dt = torch.exp(self.kernel.log_dt.to(u.device))
+        B = _conj(self.kernel.B).to(u.device)
+        dC = _conj(self.kernel.C).to(u.device)
+        w = _conj(self.kernel.w).to(u.device)
+        dB = torch.diag_embed(1.0 / (1.0 - 0.5 * dt[:, None] * w))  #  (256,64,64)
+        
+        
+
+
+        dB = dt[:, None] * contract("dab,db->da", dB, B)
+        dB1 = dB.unsqueeze(2)
+        dB2 = dB.unsqueeze(1)
+        dB = (dB1 * dB2).sum(2)
+        dCB = contract("abc,bc->ab", dC, dB).unsqueeze(2)
+        if self.bidirectional:
+            fwd, bwd = dCB.unbind(0)
+            fwd, bwd = fwd.unsqueeze(0), bwd.unsqueeze(0)
+            y = (
+                y
+                + (us * fwd).unsqueeze(1).float()
+                + (us.flip(2) * bwd).unsqueeze(1).float()
+            )
+        else:
+
+            y = y + (us * dCB).unsqueeze(1).float()
 
         # Compute state update
         if state is not None:
