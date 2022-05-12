@@ -10,7 +10,8 @@ model:
   d_model: 512
   prenorm: false
   layer:
-    bidirectional: true
+    d_state: 256
+    bidirectional: false
     postact: glu
     n_ssm: 2
 

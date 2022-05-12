@@ -1,5 +1,9 @@
+import os
+import sys
+import traceback
 from typing import List, Optional, Callable
 import numpy as np
+import pytorch_lightning.callbacks
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
@@ -498,6 +502,20 @@ def train(config):
     trainer.fit(model)
     if config.train.test:
         trainer.test(model)
+
+    for cb in trainer.callbacks:
+        # print("cb type: ", str(type(cb)))
+        if isinstance(cb, pytorch_lightning.callbacks.ModelCheckpoint):
+            top = cb.best_model_score.cpu().item()
+            print("top score: ", top)
+            dirname = os.path.dirname(os.path.abspath(__file__))
+            with open(f"{dirname}/global_summary.txt", "a") as f:
+                f.write(f"{100*top:0.3f}: ")
+                cmd_line = " ".join(sys.argv[1:])
+                if "model.layer.poly=true" in cmd_line:
+                    f.write("XXX ")
+                f.write(f"python3 train.py {cmd_line}")
+                f.write("\n")
 
 
 def benchmark_step(config):
