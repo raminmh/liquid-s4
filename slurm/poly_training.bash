@@ -24,4 +24,4 @@ conda activate $PYTHON_VIRTUAL_ENVIRONMENT
 ulimit -s unlimited
 
 cd ~/liquid-s4
-python -m train wandb=null experiment=s4-lra-"${SLURM_JOB_NAME}"-new  model.layer.poly=true
+python -m train wandb=null experiment=s4-lra-"${SLURM_JOB_NAME}"-new
