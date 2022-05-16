@@ -5,13 +5,13 @@ defaults:
   - override /scheduler: cosine_warmup
 
 scheduler:
-  num_training_steps: 500000 # 200 epochs
+  num_training_steps: 250000 # 200 epochs (only 100 p edit)
   num_warmup_steps: 2500 # 1 epoch
 
 model:
   dropout: 0.0
   n_layers: 6
-  prenorm: true
+  prenorm: false # p edit
   d_model: 256
   norm: batch
   layer:
@@ -20,7 +20,7 @@ model:
     dt_min: 0.001
     dt_max: 0.1
     measure: legs
-    bidirectional: true
+    bidirectional: false # p edit
     postact: glu
     n_ssm: 256
 
@@ -28,14 +28,14 @@ decoder:
   mode: last
 
 loader:
-  batch_size: 64
+  batch_size: 256
 
 optimizer:
   lr: 0.004
   weight_decay: 0.03
 
 trainer:
-  max_epochs: 200
+  max_epochs: 100 # from 200 p edit
 
 train:
   seed: 2222
