@@ -24,4 +24,4 @@ conda activate $PYTHON_VIRTUAL_ENVIRONMENT
 ulimit -s unlimited
 
 cd ~/liquid-s4
-python -m train wandb=null optimizer.lr=0.005 experiment=s4-lra-"${SLURM_JOB_NAME}"-new
+python -m train wandb=null loader.batch_size=16 experiment=s4-lra-"${SLURM_JOB_NAME}"-new
