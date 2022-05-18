@@ -5,18 +5,18 @@
 #
 #number of CPUs to be used
 #SBATCH --ntasks=1
-#SBATCH -c 6
+#SBATCH -c 16
 #
 #Define the number of hours the job should run.
 #Maximum runtime is limited to 10 days, ie. 240 hours
 #SBATCH --time=128:00:00
 #
 #Define the amount of system RAM used by your job in GigaBytes
-#SBATCH --mem=64G
+#SBATCH --mem=256G
 
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:1
-#SBATCH --constraint=GTX1080Ti
+#SBATCH --gres=gpu:4
+#SBATCH --constraint=A10
 
 #Send emails when a job starts, it is finished or it exits
 #SBATCH --mail-user=mlechner@ist.ac.at
@@ -59,32 +59,39 @@ source venv/bin/activate
 # pathfindeR 0.75270
 
 # trainer.gpus=2
-if [ $SLURM_ARRAY_TASK_ID = 6 ]
-then
-  python -m train model.layer.poly=true experiment=s4-lra-cifar model.layer.postact=glu model.layer.bidirectional=true optimizer.weight_decay=0.01 trainer.max_epochs=160 
-elif [ $SLURM_ARRAY_TASK_ID = 7 ]
-then
-  python -m train model.layer.poly=true experiment=s4-lra-cifar model.layer.postact=glu model.layer.bidirectional=true optimizer.weight_decay=0.005 trainer.max_epochs=160 
-  python -m train experiment=s4-lra-cifar model.layer.postact=glu model.layer.bidirectional=true optimizer.weight_decay=0.005 trainer.max_epochs=160
-elif [ $SLURM_ARRAY_TASK_ID = 8 ]
-then
-  python -m train model.layer.poly=true experiment=s4-lra-cifar model.layer.postact=glu model.layer.bidirectional=true optimizer.weight_decay=0.01 trainer.max_epochs=160 scheduler.patience=20 
-elif [ $SLURM_ARRAY_TASK_ID = 9 ]
-then
-  python -m train model.layer.poly=true experiment=s4-lra-pathfinder 
-  python -m train experiment=s4-lra-pathfinder
-elif [ $SLURM_ARRAY_TASK_ID = 10 ]
-then
-  python -m train model.layer.poly=true experiment=s4-lra-pathfinder optimizer.lr=0.01 
-elif [ $SLURM_ARRAY_TASK_ID = 11 ]
-then
-  python -m train model.layer.poly=true experiment=s4-lra-pathfinder optimizer.lr=0.006 
-elif [ $SLURM_ARRAY_TASK_ID = 12 ]
-then
-  python -m train model.layer.poly=true experiment=s4-lra-pathfinder optimizer.lr=0.004 scheduler.patience=20 
-elif [ $SLURM_ARRAY_TASK_ID = 13 ]
-then
-  python -m train model.layer.poly=true experiment=s4-lra-aan &> results/aan.txt
-fi
+#  lr: 0.004
+#  weight_decay: 0.03
+python -m train wandb=null experiment=s4-lra-pathfinder-new optimizer.lr=0.008 optimizer.weight_decay=0.01 trainer.gpus=4
+python -m train wandb=null experiment=s4-lra-pathfinder-new optimizer.lr=0.01 optimizer.weight_decay=0.03 trainer.gpus=4
+python -m train wandb=null experiment=s4-lra-pathfinder-new optimizer.lr=0.008 model.layer.d_state=128 trainer.gpus=4
+
+
+#if [ $SLURM_ARRAY_TASK_ID = 6 ]
+#then
+#  python -m train model.layer.poly=true experiment=s4-lra-cifar model.layer.postact=glu model.layer.bidirectional=true optimizer.weight_decay=0.01 trainer.max_epochs=160
+#elif [ $SLURM_ARRAY_TASK_ID = 7 ]
+#then
+#  python -m train model.layer.poly=true experiment=s4-lra-cifar model.layer.postact=glu model.layer.bidirectional=true optimizer.weight_decay=0.005 trainer.max_epochs=160
+#  python -m train experiment=s4-lra-cifar model.layer.postact=glu model.layer.bidirectional=true optimizer.weight_decay=0.005 trainer.max_epochs=160
+#elif [ $SLURM_ARRAY_TASK_ID = 8 ]
+#then
+#  python -m train model.layer.poly=true experiment=s4-lra-cifar model.layer.postact=glu model.layer.bidirectional=true optimizer.weight_decay=0.01 trainer.max_epochs=160 scheduler.patience=20
+#elif [ $SLURM_ARRAY_TASK_ID = 9 ]
+#then
+#  python -m train model.layer.poly=true experiment=s4-lra-pathfinder
+#  python -m train experiment=s4-lra-pathfinder
+#elif [ $SLURM_ARRAY_TASK_ID = 10 ]
+#then
+#  python -m train model.layer.poly=true experiment=s4-lra-pathfinder optimizer.lr=0.01
+#elif [ $SLURM_ARRAY_TASK_ID = 11 ]
+#then
+#  python -m train model.layer.poly=true experiment=s4-lra-pathfinder optimizer.lr=0.006
+#elif [ $SLURM_ARRAY_TASK_ID = 12 ]
+#then
+#  python -m train model.layer.poly=true experiment=s4-lra-pathfinder optimizer.lr=0.004 scheduler.patience=20
+#elif [ $SLURM_ARRAY_TASK_ID = 13 ]
+#then
+#  python -m train model.layer.poly=true experiment=s4-lra-aan &> results/aan.txt
+#fi
 
 # rm -r $HOME/s4/tmp/tmp_$SLURM_ARRAY_TASK_ID

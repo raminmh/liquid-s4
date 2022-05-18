@@ -5,17 +5,17 @@
 #
 #number of CPUs to be used
 #SBATCH --ntasks=1
-#SBATCH -c 6
+#SBATCH -c 24
 #
 #Define the number of hours the job should run.
 #Maximum runtime is limited to 10 days, ie. 240 hours
-#SBATCH --time=96:00:00
+#SBATCH --time=120:00:00
 #
 #Define the amount of system RAM used by your job in GigaBytes
-#SBATCH --mem=64G
+#SBATCH --mem=500G
 
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:4
 #SBATCH --constraint=A10
 
 #Send emails when a job starts, it is finished or it exits
@@ -35,8 +35,12 @@ module load cudnn/8.2.4.15
 
 
 
-cd $HOME/state-spaces
+cd $HOME/s4
 source venv/bin/activate
 
+#  lr: 0.0005
+#  weight_decay: 0.05
+
 # trainer.gpus=2
-python -m train wandb=null experiment=s4-lra-pathx
+python -m train wandb=null experiment=s4-lra-pathx-new trainer.gpus=4 optimizer.lr=0.0008
+python -m train wandb=null experiment=s4-lra-pathx-new trainer.gpus=4 optimizer.weight_decay=0.02

@@ -172,11 +172,11 @@ class S4(nn.Module):
         u_f_corr[..., :] = u_f[..., comb[:,0]] * u_f[..., comb[:,1]]   
         
         us = torch.flip(u_f_corr, [-1]).to(u.device)
-        
 
         # pad us with zeros until it is the same size as y:
         us = F.pad(us, (0, u.size(-1) - us.size(-1)))
-        
+        # breakpoint()
+
         #print(f"u_f_corr: {u_f_corr.size()}")
         
         # pad zeroes al
@@ -188,11 +188,13 @@ class S4(nn.Module):
         B = _conj(self.kernel.B).to(u.device)
         dC = _conj(self.kernel.C).to(u.device)
         w = _conj(self.kernel.w).to(u.device)
+        # print("dt.size",str(dt.size()))
+        # print("w.size",str(w.size()))
+        # print("B.size",str(B.size()))
+        # print("dC.size",str(dC.size()))
+        # print("w.size",str(w.size()))
         dB = torch.diag_embed(1.0 / (1.0 - 0.5 * dt[:, None] * w))  #  (256,64,64)
         
-        
-
-
         dB = dt[:, None] * contract("dab,db->da", dB, B)
         dB1 = dB.unsqueeze(2)
         dB2 = dB.unsqueeze(1)
