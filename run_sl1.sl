@@ -5,17 +5,17 @@
 #
 #number of CPUs to be used
 #SBATCH --ntasks=1
-#SBATCH -c 16
+#SBATCH -c 8
 #
 #Define the number of hours the job should run.
 #Maximum runtime is limited to 10 days, ie. 240 hours
 #SBATCH --time=128:00:00
 #
 #Define the amount of system RAM used by your job in GigaBytes
-#SBATCH --mem=256G
+#SBATCH --mem=128G
 
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:2
 #SBATCH --constraint=A10
 
 #Send emails when a job starts, it is finished or it exits
@@ -58,12 +58,15 @@ source venv/bin/activate
 # cifar: 0.84100
 # pathfindeR 0.75270
 
+python3 -m train wandb=null experiment=s4-lra-cifar-new trainer.gpus=2 model.layer.liquid=3 # it/s
+
+
 # trainer.gpus=2
 #  lr: 0.004
 #  weight_decay: 0.03
-python -m train wandb=null experiment=s4-lra-pathfinder-new optimizer.lr=0.008 optimizer.weight_decay=0.01 trainer.gpus=4
-python -m train wandb=null experiment=s4-lra-pathfinder-new optimizer.lr=0.01 optimizer.weight_decay=0.03 trainer.gpus=4
-python -m train wandb=null experiment=s4-lra-pathfinder-new optimizer.lr=0.008 model.layer.d_state=128 trainer.gpus=4
+#python -m train wandb=null experiment=s4-lra-pathfinder-new optimizer.lr=0.008 optimizer.weight_decay=0.01 trainer.gpus=4
+#python -m train wandb=null experiment=s4-lra-pathfinder-new optimizer.lr=0.01 optimizer.weight_decay=0.03 trainer.gpus=4
+#python -m train wandb=null experiment=s4-lra-pathfinder-new optimizer.lr=0.008 model.layer.d_state=128 trainer.gpus=4
 
 
 #if [ $SLURM_ARRAY_TASK_ID = 6 ]

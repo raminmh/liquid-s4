@@ -241,7 +241,7 @@ class S4(nn.Module):
         degree = self.liquid
         us = u
         for i in range(1, degree + 1):
-            print(f"[Liquid={self.liquid}] Generating degree {i+1} input polynomial")
+            # print(f"[Liquid={self.liquid}] Generating degree {i+1} input polynomial")
             us_shift = torch.nn.functional.pad(us[..., :-1], (1, 0), "constant", 0)
             us = us * us_shift
             dB1 = dB.unsqueeze(2)
@@ -260,13 +260,13 @@ class S4(nn.Module):
 
                 y = y + (us * dCB).unsqueeze(1).float()
 
-            print(f"dB.size()", dB.size())
-            print(f"dB1.size()", dB1.size())
-            print(f"dB2.size()", dB2.size())
-            print(f"dCB.size()", dCB.size())
-            print(f"y.size()", y.size())
-            print(f"us.size()", us.size())
-        breakpoint()
+            # print(f"dB.size()", dB.size())
+            # print(f"dB1.size()", dB1.size())
+            # print(f"dB2.size()", dB2.size())
+            # print(f"dCB.size()", dCB.size())
+            # print(f"y.size()", y.size())
+            # print(f"us.size()", us.size())
+        # breakpoint()
         # Compute state update
         if state is not None:
             assert (
