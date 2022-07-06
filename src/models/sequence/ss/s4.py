@@ -17,7 +17,7 @@ import opt_einsum as oe
 import numpy as np
 import itertools
 import time
-
+import math
 optimized = True
 
 if optimized:
@@ -52,6 +52,7 @@ class S4(nn.Module):
         shift=False,
         linear=False,
         liquid=0,
+        allcombs=True,
         # SSM Kernel arguments
         **kernel_args,
     ):
@@ -76,7 +77,7 @@ class S4(nn.Module):
 
         log = src.utils.train.get_logger(__name__)
         if liquid >= 1:
-            log.info(f"Constructing liquid-S4 with degree={liquid+1}")
+            log.info(f"Constructing liquid-S4 with degree={liquid+1}, allcombs={allcombs}")
         else:
             log.info(
                 f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid=1 argument)"
@@ -91,6 +92,7 @@ class S4(nn.Module):
         self.shift = shift
         self.linear = linear
         self.liquid = liquid
+        self.allcombs = allcombs
 
         # optional multiplicative modulation GLU-style
         # https://arxiv.org/abs/2002.05202
@@ -130,6 +132,7 @@ class S4(nn.Module):
                 activate=True,
                 weight_norm=weight_norm,
             )
+        self._allcombs_index_cache = None
 
     def forward(
         self, u, state=None, **kwargs
@@ -172,64 +175,25 @@ class S4(nn.Module):
             "bhl,ch->bchl", u, self.D
         )  # u.unsqueeze(-3) * self.D.unsqueeze(-1)
 
-        ########################### HEAD #####################################
-        # pp = 2
-        # seq_len = 40
-        # ind = range(0, seq_len, 1)
-        # comb = []
-        # for comb_length in range(2, pp + 1, 1):
-        #     # compute all combination of ind:
-        #     comb.extend(list(itertools.combinations(ind, comb_length)))
-        #
-        # comb = torch.tensor(comb).to(u.device)
-        # # pick the last seq_len enteries of u:
-        # u_f = u[..., -seq_len:].to(u.device)
-        # # print(f"u_f: {u.size()}")
-        #
-        # u_f_corr = torch.zeros(u_f.shape[0], u_f.shape[1], len(comb)).to(u.device)
-        # u_f_corr[..., :] = u_f[..., comb[:, 0]] * u_f[..., comb[:, 1]]
-        #
-        # us = torch.flip(u_f_corr, [-1]).to(u.device)
-        #
-        # # pad us with zeros until it is the same size as y:
-        # us = F.pad(us, (0, u.size(-1) - us.size(-1)))
-
-        # print(f"comb.size(): {comb.size()}")
-        # print(f"u.size(): {u.size()}")
-        # print(f"u_f.size(): {u_f.size()}")
-        # print(f"u_f_corr.size(): {u_f_corr.size()}")
-        # print(f"us.size(): {us.size()}")
-        # u.size(): torch.Size([50, 128, 1024])
-        # comb.size(): torch.Size([780, 2])
-        # comb[0]        tensor([0, 1])
-        # comb[1]        tensor([0, 2])
-        # comb[100]      tensor([2, 26])
-        # u_f.size(): torch.Size([50, 128, 40])
-        # u_f_corr.size(): torch.Size([50, 128, 780])
-        # dt.size torch.Size([128])
-        # w.size torch.Size([128, 512])
-        # B.size torch.Size([128, 512])
-        # dC.size torch.Size([2, 128, 512])
-        # w.size torch.Size([128, 512])
-        # y.size torch.Size([50, 1, 128, 1024])
-        # us.size(): torch.Size([50, 128, 1024])
-        # dB.size() torch.Size([128, 512])
-        # dB1.size() torch.Size([128, 512, 1])
-        # dB2.size() torch.Size([128, 1, 512])
-        # new dB.size: [128, 512,512].sum(2) = [128, 512]
-        # dCB.size() torch.Size([2, 128, 1])
-
-        # import sys
-        #
-        # sys.exit(-0)
-        # breakpoint()
-
-        ########################### TAIL #####################################
-        # print(f"u_f_corr: {u_f_corr.size()}")
-
-        # pad zeroes al
-        # us = torch.nn.functional.pad(u[..., :-1], (1, 0), "constant", 0)
-        # us = us * u
+        seq_len = int(y.size(-1))
+        if self._allcombs_index_cache is None:
+            self._allcombs_index_cache = []
+            for p in range(2,self.liquid+2):
+                selected_count = 1
+                for n in range(2,seq_len):
+                    count = math.comb(n,p)
+                    if count >= seq_len:
+                        selected_count = n
+                        break
+                indices = range(seq_len-selected_count,seq_len)
+                indices = list(itertools.combinations(indices, p))
+                # print(f"p={p}, seq_len={seq_len}, selected_count={selected_count}",)
+                # print(f"{len(indices)=}")
+                if len(indices) != seq_len:
+                    # select exactly amount to match sequence length dimension
+                    indices = indices[-seq_len:]
+                indices = torch.LongTensor(indices)
+                self._allcombs_index_cache.append((p,indices))
 
         dt = torch.exp(self.kernel.log_dt.to(u.device))
         B = _conj(self.kernel.B).to(u.device)
@@ -238,12 +202,19 @@ class S4(nn.Module):
         dB = torch.diag_embed(1.0 / (1.0 - 0.5 * dt[:, None] * w))  #  (256,64,64)
 
         dB = dt[:, None] * contract("dab,db->da", dB, B)
-        degree = self.liquid
         us = u
-        for i in range(1, degree + 1):
+        for i in range(self.liquid):
             # print(f"[Liquid={self.liquid}] Generating degree {i+1} input polynomial")
-            us_shift = torch.nn.functional.pad(us[..., :-1], (1, 0), "constant", 0)
-            us = us * us_shift
+            if self.allcombs:
+                p,indices = self._allcombs_index_cache[i]
+                us = u[..., indices[:, 0]]
+                for j in range(1,p):
+                    us = us*u[..., indices[:, j]]
+                if us.size(-1) != u.size(-1):
+                    us = F.pad(us, (0, u.size(-1) - us.size(-1)))
+            else:
+                us_shift = torch.nn.functional.pad(us[..., :-1], (1, 0), "constant", 0)
+                us = us * us_shift
             dB1 = dB.unsqueeze(2)
             dB2 = dB.unsqueeze(1)
             dB = (dB1 * dB2).sum(2)
@@ -260,13 +231,6 @@ class S4(nn.Module):
 
                 y = y + (us * dCB).unsqueeze(1).float()
 
-            # print(f"dB.size()", dB.size())
-            # print(f"dB1.size()", dB1.size())
-            # print(f"dB2.size()", dB2.size())
-            # print(f"dCB.size()", dCB.size())
-            # print(f"y.size()", y.size())
-            # print(f"us.size()", us.size())
-        # breakpoint()
         # Compute state update
         if state is not None:
             assert (
