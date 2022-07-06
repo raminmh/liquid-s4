@@ -2,6 +2,15 @@
 
 This repository provides implementations and experiments for the following papers.
 
+## Liquid S4
+
+```bash
+python3 -m train wandb=null experiment=s4-lra-cifar-new # plain S4
+python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=1 # liquid S4 with 2 terms u(i)*u(j)
+python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=2 # liquid S4 with 3 terms u(i)*u(j)*u(k)
+python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=N # liquid S4 with N terms u(i)*u(j)...
+```
+
 ## SaShiMi (arXiv)
 
 ![SaShiMi](assets/sashimi.png "SaShiMi Architecture")

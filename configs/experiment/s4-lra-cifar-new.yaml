@@ -7,12 +7,13 @@ defaults:
 model:
   dropout: 0.1
   n_layers: 6
-  d_model: 512
+  d_model: 128
   prenorm: false
   layer:
+    d_state: 512
     bidirectional: true
     postact: glu
-    n_ssm: 2
+    n_ssm: ${..d_model}
 
 dataset:
   grayscale: true
@@ -21,7 +22,7 @@ loader:
   batch_size: 50
 
 optimizer:
-  lr: 0.01
+  lr: 0.005
   weight_decay: 0.05
 
 trainer:
