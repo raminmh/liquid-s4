@@ -1,8 +1,6 @@
-# Structured State Spaces for Sequence Modeling
+# Liquid State Space Models
 
-This repository provides implementations and experiments for the following papers.
-
-## Liquid S4
+This repository provides implementations and experiments for Liquid S4
 
 ```bash
 python3 -m train wandb=null experiment=s4-lra-cifar-new # plain S4
@@ -10,34 +8,6 @@ python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=1 # l
 python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=2 # liquid S4 with 3 terms u(i)*u(j)*u(k)
 python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=N # liquid S4 with N terms u(i)*u(j)...
 ```
-
-## SaShiMi (arXiv)
-
-![SaShiMi](assets/sashimi.png "SaShiMi Architecture")
-> **It's Raw! Audio Generation with State-Space Models**\
-> Karan Goel, Albert Gu, Chris Donahue, Christopher Ré\
-> Paper: https://arxiv.org/abs/2202.09729
-
-## S4 (ICLR 2022 - Outstanding Paper HM)
-
-![Structured State Spaces](assets/properties.png "Properties of Structured State Spaces")
-> **Efficiently Modeling Long Sequences with Structured State Spaces**\
-> Albert Gu, Karan Goel, Christopher Ré\
-> Paper: https://arxiv.org/abs/2111.00396
-
-## LSSL (NeurIPS 2021)
-
-![Linear State Space Layer](assets/splash.png "Properties of Sequential State Spaces")
-> **Combining Recurrent, Convolutional, and Continuous-time Models with the Linear State Space Layer**\
-> Albert Gu, Isys Johnson, Karan Goel, Khaled Saab, Tri Dao, Atri Rudra, Christopher Ré\
-> Paper: https://arxiv.org/abs/2110.13985
-
-## HiPPO (NeurIPS 2020 - Spotlight)
-![HiPPO Framework](assets/hippo.png "HiPPO Framework")
-> **HiPPO: Recurrent Memory with Optimal Polynomial Projections**\
-> Albert Gu*, Tri Dao*, Stefano Ermon, Atri Rudra, Christopher Ré\
-> Paper: https://arxiv.org/abs/2008.07669
-
 
 ## Table of Contents
 - [Repository Setup](#setup)
@@ -48,26 +18,6 @@ python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=N # l
 - [SaShiMi](sashimi/README.md#sashimi)
 - [Repository Structure](#overall-repository-structure)
 - [Citation](#citation)
-
-## Changelog
-
-### 2022-05-01 - [V2.1]
-- Minor updates to S4 modules
-- New S4D (S4-diagonal) standalone model found at `src/models/sequence/ss/standalone/s4d.py`. Simple variant using diagonal SSMs that recovers S4's performance on most tasks. Can be run with any existing experiment config with the additional flag `model/layer=s4d` on the command line.
-- New [LRA configs](#long-range-arena-lra) for updated S4 code, with an average score of ~86
-
-### 2022-04-03
-By default, S4 no longer requires installing Pykeops or a custom CUDA kernel.
-
-### 2022-02-27 - [V2]
-Code release for SaShiMi audio model.
-
-### 2022-01-29
-Added configs for time series datasets from the Informer paper.
-
-### 2021-11-18 - [V1]
-First release of this repository containing the S4 module and configs to reproduce sCIFAR, Speech Commands, Long Range Arena, and WikiText-103 results.
-
 
 ## Setup
 
