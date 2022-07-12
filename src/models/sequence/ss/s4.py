@@ -76,8 +76,10 @@ class S4(nn.Module):
             log.info(f"Constructing S4 (H, N, L) = ({d_model}, {d_state}, {l_max})")
 
         log = src.utils.train.get_logger(__name__)
+        if liquid == 1:
+            raise ValueError("Illegal argument (liquid=1). Valid options are 0 (vanilla S4) and n>1 (liquid S4 with up to n-term)")
         if liquid >= 1:
-            log.info(f"Constructing liquid-S4 with degree={liquid+1}, allcombs={allcombs}")
+            log.info(f"Constructing liquid-S4 with degree={liquid}, allcombs={allcombs}")
         else:
             log.info(
                 f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid=1 argument)"
@@ -178,7 +180,7 @@ class S4(nn.Module):
         seq_len = int(y.size(-1))
         if self._allcombs_index_cache is None:
             self._allcombs_index_cache = []
-            for p in range(2,self.liquid+2):
+            for p in range(2,self.liquid+1):
                 selected_count = 1
                 for n in range(2,seq_len):
                     count = math.comb(n,p)
@@ -203,7 +205,7 @@ class S4(nn.Module):
 
         dB = dt[:, None] * contract("dab,db->da", dB, B)
         us = u
-        for i in range(self.liquid):
+        for i in range(self.liquid-1):
             # print(f"[Liquid={self.liquid}] Generating degree {i+1} input polynomial")
             if self.allcombs:
                 p,indices = self._allcombs_index_cache[i]
