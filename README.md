@@ -4,9 +4,10 @@ This repository provides implementations and experiments for Liquid S4
 
 ```bash
 python3 -m train wandb=null experiment=s4-lra-cifar-new # plain S4
-python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=1 # liquid S4 with 2 terms u(i)*u(j)
-python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=2 # liquid S4 with 3 terms u(i)*u(j)*u(k)
+python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=2 # liquid S4 with 2 terms u(i)*u(j)
+python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=3 # liquid S4 with 3 terms u(i)*u(j)*u(k)
 python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=N # liquid S4 with N terms u(i)*u(j)...
+python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=2 model.layer.mode=diag # S4D with liquid=2
 ```
 
 ## Table of Contents
@@ -65,7 +66,7 @@ Two methods are supported. The code will automatically detect if either of these
 #### Custom CUDA Kernel
 
 This version is faster but requires manual compilation on each machine.
-Run `python setup.py install` from the directory `extensions/cauchy/`.
+Run `python setup.py install` from the directory `cd`.
 
 #### Pykeops
 
