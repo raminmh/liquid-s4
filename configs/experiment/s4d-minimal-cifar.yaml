@@ -2,7 +2,7 @@
 defaults:
   - /pipeline: cifar
   - /model: s4
-  - override /model/layer: s4d
+  - override /model/layer: s4d_minimal
   - override /scheduler: cosine_warmup
 
 model:

@@ -22,7 +22,7 @@ model:
     measure: legs
     bidirectional: true
     postact: glu
-    n_ssm: 2
+    n_ssm: ${..d_model}
 
 dataset:
   grayscale: true

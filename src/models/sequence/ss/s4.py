@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,6 +7,7 @@ import torch.nn.utils as U
 from functools import partial
 from einops import rearrange, repeat
 import opt_einsum as oe
+import itertools
 
 optimized = True
 
@@ -13,7 +16,7 @@ if optimized:
 else:
     contract = torch.einsum
 
-from src.models.sequence.ss.kernel import SSKernel
+from src.models.sequence.ss.kernel import SSKernel, _conj
 from src.models.nn import LinearActivation, Activation, DropoutNd
 
 class S4(nn.Module):
@@ -37,6 +40,8 @@ class S4(nn.Module):
             verbose=False,
             shift=False,
             linear=False,
+            liquid=0,
+            allcombs=True,
             # SSM Kernel arguments
             **kernel_args,
         ):
@@ -73,7 +78,15 @@ class S4(nn.Module):
             import src.utils.train
             log = src.utils.train.get_logger(__name__)
             log.info(f"Constructing S4 (H, N, L) = ({d_model}, {d_state}, {l_max})")
-
+            log = src.utils.train.get_logger(__name__)
+        if liquid == 1:
+            raise ValueError("Illegal argument (liquid=1). Valid options are 0 (vanilla S4) and n>1 (liquid S4 with up to n-term)")
+        if liquid >= 1:
+            log.info(f"Constructing liquid-S4 with degree={liquid}, allcombs={allcombs}")
+        else:
+            log.info(
+                f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid=2 argument)"
+            )
         self.d_model = d_model
         self.H = d_model
         self.N = d_state
@@ -83,6 +96,9 @@ class S4(nn.Module):
         self.transposed = transposed
         self.shift = shift
         self.linear = linear
+        self.linear = linear
+        self.liquid = liquid
+        self.allcombs = allcombs
 
         self.gate = gate
         self.bottleneck = bottleneck
@@ -134,7 +150,7 @@ class S4(nn.Module):
 
         # SSM Kernel
         self.kernel = SSKernel(self.H, N=self.N, L=self.L, channels=channels, verbose=verbose, **kernel_args)
-
+        log.info(f"Using S4 kernel {self.kernel.mode}")
         # Pointwise
         if not self.linear:
             self.activation = Activation(activation)
@@ -152,6 +168,7 @@ class S4(nn.Module):
                 activate=True,
                 weight_norm=weight_norm,
             )
+        self._allcombs_index_cache = None
 
 
 
@@ -204,10 +221,63 @@ class S4(nn.Module):
             y_f = contract('bhl,chl->bchl', u_f, k_f)
             y = torch.fft.irfft(y_f, n=L_kernel+L)[..., :L] # (B C H L)
 
-
-
         # Compute D term in state space equation - essentially a skip connection
         y = y + contract('bhl,ch->bchl', u, self.D)
+        seq_len = int(y.size(-1))
+        if self._allcombs_index_cache is None:
+            self._allcombs_index_cache = []
+            for p in range(2,self.liquid+1):
+                selected_count = 1
+                for n in range(2,seq_len):
+                    count = math.comb(n,p)
+                    if count >= seq_len:
+                        selected_count = n
+                        break
+                indices = range(seq_len-selected_count,seq_len)
+                indices = list(itertools.combinations(indices, p))
+                # print(f"p={p}, seq_len={seq_len}, selected_count={selected_count}",)
+                # print(f"{len(indices)=}")
+                if len(indices) != seq_len:
+                    # select exactly amount to match sequence length dimension
+                    indices = indices[-seq_len:]
+                indices = torch.LongTensor(indices)
+                self._allcombs_index_cache.append((p,indices))
+
+        dt = torch.exp(self.kernel.log_dt.to(u.device))
+        B = _conj(self.kernel.B).to(u.device)
+        dC = _conj(self.kernel.C).to(u.device)
+        w = _conj(self.kernel.w).to(u.device)
+        dB = torch.diag_embed(1.0 / (1.0 - 0.5 * dt[:, None] * w))  #  (256,64,64)
+
+        dB = dt[:, None] * contract("dab,db->da", dB, B)
+        us = u
+        for i in range(self.liquid-1):
+            # print(f"[Liquid={self.liquid}] Generating degree {i+1} input polynomial")
+            if self.allcombs:
+                p,indices = self._allcombs_index_cache[i]
+                us = u[..., indices[:, 0]]
+                for j in range(1,p):
+                    us = us*u[..., indices[:, j]]
+                if us.size(-1) != u.size(-1):
+                    us = F.pad(us, (0, u.size(-1) - us.size(-1)))
+            else:
+                us_shift = torch.nn.functional.pad(us[..., :-1], (1, 0), "constant", 0)
+                us = us * us_shift
+            dB1 = dB.unsqueeze(2)
+            dB2 = dB.unsqueeze(1)
+            dB = (dB1 * dB2).sum(2)
+            dCB = contract("abc,bc->ab", dC, dB).unsqueeze(2)
+            if self.bidirectional:
+                fwd, bwd = dCB.unbind(0)
+                fwd, bwd = fwd.unsqueeze(0), bwd.unsqueeze(0)
+                y = (
+                    y
+                    + (us * fwd).unsqueeze(1).float()
+                    + (us.flip(2) * bwd).unsqueeze(1).float()
+                )
+            else:
+
+                y = y + (us * dCB).unsqueeze(1).float()
 
         # Compute state update
         if state is not None:
