@@ -1,6 +1,7 @@
 import copy
 import os
 import random
+import sys
 import time
 from functools import partial, wraps
 from typing import Callable, List, Optional
@@ -665,8 +666,6 @@ def train(config):
         trainer.fit(model)
     if config.train.test:
         trainer.test(model)
-
-
 
 
 @hydra.main(config_path="configs", config_name="config.yaml")

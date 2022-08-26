@@ -1,0 +1,61 @@
+# @package _global_
+defaults:
+  - /pipeline: aan
+  - /model: s4
+  - override /scheduler: cosine_warmup
+
+scheduler:
+  num_training_steps: 50000 # 20 epochs
+  num_warmup_steps: 2500 # 1 epoch
+
+encoder: embedding
+decoder:
+  _name_: retrieval
+  mode: pool
+  use_lengths: true
+  nli: true
+  activation: gelu
+  d_model: null
+model:
+  layer:
+    _name_: s4
+    d_state: 64
+    channels: 1
+    bidirectional: false
+    activation: gelu
+    postact: glu
+    initializer: null
+    weight_norm: false
+    hyper_act: null
+    dropout: ${..dropout}
+    measure: legs
+    rank: 1
+    dt_min: 0.001
+    dt_max: 0.1
+    lr: 0.001
+    mode: nplr
+    n_ssm: 256
+    deterministic: false
+    l_max: ${oc.select:dataset.__l_max,null}
+    verbose: true
+  _name_: model
+  prenorm: false
+  transposed: true
+  n_layers: 6
+  d_model: 256
+  residual: R
+  norm: batch
+  dropout: 0.2
+loader:
+  batch_size: 64
+
+optimizer:
+  lr: 0.01
+  weight_decay: 0.05
+
+trainer:
+  max_epochs: 20
+
+train:
+  seed: 2222
+  interval: step

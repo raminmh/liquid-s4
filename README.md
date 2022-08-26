@@ -3,12 +3,15 @@
 This repository provides implementations and experiments for Liquid S4
 
 ```bash
+python3 -m train wandb=null experiment=ml/listops # plain S4
 python3 -m train wandb=null experiment=s4-lra-cifar-new # plain S4
 python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=2 # liquid S4 with 2 terms u(i)*u(j)
 python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=3 # liquid S4 with 3 terms u(i)*u(j)*u(k)
 python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=N # liquid S4 with N terms u(i)*u(j)...
 python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=2 model.layer.mode=diag # S4D with liquid=2
 ```
+python3 -m train wandb=null experiment=ml/imdb-new model.layer.liquid=2 model.layer.lflip=True
+python3 -m train wandb=null experiment=ml/imdb-new model.layer.liquid=2 model.layer.lflip=False
 
 ## Table of Contents
 - [Repository Setup](#setup)
@@ -23,6 +26,7 @@ python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=2 mod
 ## Setup
 
 ### Requirements
+This repository requires Python 3.8+ and Pytorch 1.9+.
 This repository requires Python 3.8+ and Pytorch 1.9+.
 Other packages are listed in `requirements.txt`.
 

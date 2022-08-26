@@ -60,6 +60,7 @@ layer = {
 }
 
 callbacks = {
+    "score": "src.callbacks.score.Score",
     "timer": "src.callbacks.timer.Timer",
     "params": "src.callbacks.params.ParamsLog",
     "learning_rate_monitor": "pytorch_lightning.callbacks.LearningRateMonitor",

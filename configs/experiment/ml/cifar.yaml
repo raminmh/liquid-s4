@@ -1,0 +1,58 @@
+# @package _global_
+defaults:
+  - /pipeline: pathfinder
+  - /model: s4
+  - override /scheduler: cosine_warmup
+
+optimizer:
+  _name_: adamw
+  lr: 0.0004
+  weight_decay: 0.03
+scheduler:
+  _name_: cosine_warmup
+  num_warmup_steps: 10000
+  num_training_steps: 500000
+encoder: linear
+decoder:
+  _name_: sequence
+  mode: pool
+model:
+  layer:
+    _name_: s4
+    d_state: 64
+    channels: 1
+    bidirectional: true
+    activation: gelu
+    postact: glu
+    initializer: null
+    weight_norm: false
+    hyper_act: null
+    dropout: ${..dropout}
+    measure: legs
+    rank: 1
+    dt_min: 0.0002
+    dt_max: 0.02
+    lr: 0.0004
+    mode: nplr
+    n_ssm: 256
+    deterministic: false
+    l_max: ${oc.select:dataset.__l_max,null}
+    verbose: true
+  _name_: model
+  prenorm: true
+  transposed: true
+  n_layers: 6
+  d_model: 256
+  residual: R
+  norm: batch
+  dropout: 0.0
+
+loader:
+  batch_size: 64
+
+trainer:
+  max_epochs: 200
+
+train:
+  seed: 2222
+  interval: step
