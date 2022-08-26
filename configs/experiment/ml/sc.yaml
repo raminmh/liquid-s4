@@ -1,44 +1,34 @@
 # @package _global_
+# Should get to around 96.5%
 defaults:
-  - /pipeline: imdb
+  - /pipeline: sc
   - /model: s4
   - override /scheduler: cosine_warmup
-
-decoder:
-  mode: pool
 
 model:
   dropout: 0.0
   n_layers: 6
-  d_model: 256
   prenorm: true
+  d_model: 128
   norm: batch
   layer:
     d_state: 64
-    lr: 0.001
-    dt_min: 0.001
-    dt_max: 0.1
-    measure: legs
     bidirectional: true
     postact: glu
     n_ssm: ${..d_model}
 
-dataset:
-  l_max: 4096
-  level: char
-
-loader:
-  batch_size: 16
-
 optimizer:
-  lr: 0.01
+  lr: 0.005
   weight_decay: 0.05
 
-scheduler:
-  num_training_steps: 50000
+loader:
+  batch_size: 64
 
 trainer:
-  max_epochs: 32
+  max_epochs: 50
+
+scheduler:
+  num_training_steps: 200000
 
 train:
   seed: 2222

@@ -9,6 +9,10 @@ timer:
   epoch: True
   val: True
 
+score:
+  # _target_: callbacks.score.Score
+  enable: True
+
 params:
   # _target_: callbacks.params.ParamsLog
   total: True

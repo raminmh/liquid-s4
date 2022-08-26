@@ -1,0 +1,57 @@
+# @package _global_
+defaults:
+  - /pipeline: listops
+  - /model: s4
+  - override /scheduler: cosine_warmup
+
+model:
+  layer:
+    _name_: s4
+    d_state: 64
+    channels: 1
+    bidirectional: false
+    activation: gelu
+    postact: glu
+    initializer: null
+    weight_norm: false
+    hyper_act: null
+    dropout: ${..dropout}
+    measure: legs
+    rank: 1
+    dt_min: 0.001
+    dt_max: 0.1
+    lr: 0.001
+    mode: nplr
+    n_ssm: ${..d_model}
+    deterministic: false
+    l_max: ${oc.select:dataset.__l_max,null}
+    verbose: true
+  _name_: model
+  prenorm: false
+  transposed: true
+  n_layers: 8
+  d_model: 128
+  residual: R
+  norm: batch
+  dropout: 0.0
+
+decoder:
+  mode: pool
+
+loader:
+  batch_size: 50
+
+optimizer:
+  _name_: adamw
+  lr: 0.01
+  weight_decay: 0.05
+
+scheduler:
+  num_training_steps: 80000
+  # patience: 5
+
+trainer:
+  max_epochs: 40
+
+train:
+  seed: 2222

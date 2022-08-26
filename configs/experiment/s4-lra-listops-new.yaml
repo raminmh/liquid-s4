@@ -13,7 +13,6 @@ model:
   layer:
     d_state: 64
     lr: 0.001
-    lr_dt: 0.01
     dt_min: 0.001
     dt_max: 0.1
     measure: legs

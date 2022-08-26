@@ -41,6 +41,7 @@ class S4(nn.Module):
             shift=False,
             linear=False,
             liquid=0,
+            lflip=False,
             allcombs=True,
             # SSM Kernel arguments
             **kernel_args,
@@ -74,9 +75,9 @@ class S4(nn.Module):
         """
 
         super().__init__()
+        import src.utils.train
+        log = src.utils.train.get_logger(__name__)
         if verbose:
-            import src.utils.train
-            log = src.utils.train.get_logger(__name__)
             log.info(f"Constructing S4 (H, N, L) = ({d_model}, {d_state}, {l_max})")
             log = src.utils.train.get_logger(__name__)
         if liquid == 1:
@@ -87,6 +88,9 @@ class S4(nn.Module):
             log.info(
                 f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid=2 argument)"
             )
+        if lflip:
+            print(f"Liquid flip enabled")
+        self.lflip = lflip
         self.d_model = d_model
         self.H = d_model
         self.N = d_state
@@ -263,6 +267,8 @@ class S4(nn.Module):
             else:
                 us_shift = torch.nn.functional.pad(us[..., :-1], (1, 0), "constant", 0)
                 us = us * us_shift
+            if self.lflip:
+                us = torch.flip(us,[-1])
             dB1 = dB.unsqueeze(2)
             dB2 = dB.unsqueeze(1)
             dB = (dB1 * dB2).sum(2)
