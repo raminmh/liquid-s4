@@ -41,7 +41,6 @@ class S4(nn.Module):
             shift=False,
             linear=False,
             liquid=0,
-            lflip=False,
             allcombs=True,
             # SSM Kernel arguments
             **kernel_args,
@@ -88,9 +87,6 @@ class S4(nn.Module):
             log.info(
                 f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid=2 argument)"
             )
-        if lflip:
-            print(f"Liquid flip enabled")
-        self.lflip = lflip
         self.d_model = d_model
         self.H = d_model
         self.N = d_state
@@ -267,8 +263,7 @@ class S4(nn.Module):
             else:
                 us_shift = torch.nn.functional.pad(us[..., :-1], (1, 0), "constant", 0)
                 us = us * us_shift
-            if self.lflip:
-                us = torch.flip(us,[-1])
+            us_corr = torch.flip(us,[-1])
             dB1 = dB.unsqueeze(2)
             dB2 = dB.unsqueeze(1)
             dB = (dB1 * dB2).sum(2)
@@ -278,12 +273,12 @@ class S4(nn.Module):
                 fwd, bwd = fwd.unsqueeze(0), bwd.unsqueeze(0)
                 y = (
                     y
-                    + (us * fwd).unsqueeze(1).float()
-                    + (us.flip(2) * bwd).unsqueeze(1).float()
+                    + (us_corr * fwd).unsqueeze(1).float()
+                    + (us_corr.flip(2) * bwd).unsqueeze(1).float()
                 )
             else:
 
-                y = y + (us * dCB).unsqueeze(1).float()
+                y = y + (us_corr * dCB).unsqueeze(1).float()
 
         # Compute state update
         if state is not None:
