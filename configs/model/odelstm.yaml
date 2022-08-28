@@ -1,5 +1,5 @@
 # _target_: models.baselines.odelstm.ODELSTM
 _name_: odelstm
 d_model: 64
-solver_type: dopri5
+solver_type: euler
 return_sequences: False

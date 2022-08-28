@@ -8,9 +8,9 @@ import pytorch_lightning as pl
 from torchmetrics.functional import accuracy
 
 
-class ODELSTMCell(nn.Module):
+class mmRNNCell(nn.Module):
     def __init__(self, d_model, d_hidden,solver_type):
-        super(ODELSTMCell, self).__init__()
+        super(mmRNNCell, self).__init__()
         self.solver_type = solver_type
         self.lstm = nn.LSTMCell(d_model, d_hidden)
         # 1 hidden layer NODE
@@ -59,16 +59,17 @@ class ODELSTMCell(nn.Module):
         return y + delta_t * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
 
 
-class ODELSTM(nn.Module):
+class mmRNN(nn.Module):
     def __init__(
         self,
         d_model,
         d_output=None,
         d_hidden=None,
         return_sequences=True,
-        solver_type="dopri5",
+        solver_type="heun",
+        **kwargs,
     ):
-        super(ODELSTM, self).__init__()
+        super(mmRNN, self).__init__()
         d_output = d_output or d_model
         d_hidden = d_hidden or d_model
         self.d_model = d_model
@@ -76,7 +77,7 @@ class ODELSTM(nn.Module):
         self.d_output = d_output
         self.return_sequences = return_sequences
 
-        self.rnn_cell = ODELSTMCell(d_model, d_hidden, solver_type=solver_type)
+        self.rnn_cell = mmRNN(d_model, d_hidden, solver_type=solver_type)
         self.fc = nn.Linear(self.d_hidden, self.d_output)
 
     def forward(self, x, timespans=None):
