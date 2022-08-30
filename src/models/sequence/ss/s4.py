@@ -93,7 +93,7 @@ class S4(nn.Module):
         if liquid_degree <= 1:
             raise ValueError(f"Illegal argument for liquid_degree ({liquid_degree}). Valid options are >= 2")
         if liquid_kernel is not None:
-            log.info(f"Constructing liquid-S4 with liquid kernel '{liquid_kernel}' and degree {liquid_degree}")
+            log.info(f"Constructing liquid-S4 with liquid kernel '{liquid_kernel}' and degree {liquid_degree} (allcombs={allcombs})")
         else:
             log.info(
                 f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid_degree='polyb'|'kb')"
@@ -194,8 +194,8 @@ class S4(nn.Module):
         self._allcombs_index_cache = None
         self._allcombs_cache_L = None
 
-    def compute_combs_cache(self,seq_len):
-        if self._allcombs_index_cache is None:
+    def get_combs_cache(self,seq_len, i ):
+        if self._allcombs_cache_L != seq_len:
             self._allcombs_index_cache = []
             self._allcombs_cache_L = seq_len
             for p in range(2, self.liquid_degree + 1):
@@ -214,16 +214,14 @@ class S4(nn.Module):
                     indices = indices[-seq_len:]
                 indices = torch.LongTensor(indices)
                 self._allcombs_index_cache.append((p, indices))
+        return self._allcombs_index_cache[i]
 
     def upgrade_degree(self,us,u,i):
         seq_len = u.size(-1)
         if self.allcombs:
-            if self._allcombs_cache_L != seq_len:
-                self.compute_combs_cache(seq_len)
-            p, indices = self._allcombs_index_cache[i]
+            p, indices = self.get_combs_cache(seq_len,i)
             us = u[..., indices[:, 0]]
             for j in range(1, p):
-                breakpoint()
                 us = us * u[..., indices[:, j]]
             if us.size(-1) != u.size(-1):
                 us = F.pad(us, (0, u.size(-1) - us.size(-1)))
@@ -292,12 +290,12 @@ class S4(nn.Module):
                     us = self.upgrade_degree(us,u,i)
                     k_b = k_b.unsqueeze(2)
                     B = self.kernel.B.to(u.device).unsqueeze(0).unsqueeze(-1)
-                    k_b = contract('abcd,abcd->abd', k_b, B)
+                    k_b = contract('abcd,abcd->abd', k_b, B) # Kbar times B
                     u_corr = self.lcontract(us)
                     u_corr = u_corr.flip(dims=[-1])
-                    k_b_f = torch.fft.fft(k_b, n=(L_kernel + L)//2 + 1)  # (C H L)
-                    u_corr_f = torch.fft.rfft(u_corr, n=L_kernel + L)  # (B H L)
-                    y_corr_f = contract('bhl,chl->bchl', u_corr_f, k_b_f)
+                    k_b_f = torch.fft.fft(k_b, n=(L_kernel + L)//2 + 1)  # complex FFT
+                    u_corr_f = torch.fft.rfft(u_corr, n=L_kernel + L)  # real-valued FFT
+                    y_corr_f = contract('bhl,chl->bchl', u_corr_f, k_b_f) # Convolution (Multiplication in FFT domain)
                     y_sum = y_sum + y_corr_f
 
             y = torch.fft.irfft(y_sum, n=L_kernel+L)[..., :L] # (B C H L)
