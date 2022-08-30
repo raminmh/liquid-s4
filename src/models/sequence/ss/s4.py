@@ -286,11 +286,17 @@ class S4(nn.Module):
                 # Approximates the liquid kernel in the fourier space by the product of K-bar and B
                 k_b = k
                 us = u
+                dt = torch.exp(self.kernel.log_dt.to(u.device))
+                B = _conj(self.kernel.B).to(u.device)
+                w = _conj(self.kernel.w).to(u.device)
+                dB = torch.diag_embed(1.0 / (1.0 - 0.5 * dt[:, None] * w))  # (256,64,64)
+                dB = dt[:, None] * contract("dab,db->da", dB, B)
+                dB = dB.unsqueeze(0).unsqueeze(-1)
+
                 for i in range(self.liquid_degree-1):
                     us = self.upgrade_degree(us,u,i)
                     k_b = k_b.unsqueeze(2)
-                    B = self.kernel.B.to(u.device).unsqueeze(0).unsqueeze(-1)
-                    k_b = contract('abcd,abcd->abd', k_b, B) # Kbar times B
+                    k_b = contract('abcd,abcd->abd', k_b, dB) # Kbar times B
                     u_corr = self.lcontract(us)
                     u_corr = u_corr.flip(dims=[-1])
                     k_b_f = torch.fft.fft(k_b, n=(L_kernel + L)//2 + 1)  # complex FFT
