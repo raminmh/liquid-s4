@@ -195,28 +195,31 @@ class S4(nn.Module):
         self._allcombs_cache_L = None
 
     def compute_combs_cache(self,seq_len):
-        if self.allcombs:
-            if self._allcombs_index_cache is None:
-                self._allcombs_index_cache = []
-                for p in range(2, self.liquid_degree + 1):
-                    selected_count = 1
-                    for n in range(2, seq_len):
-                        count = math.comb(n, p)
-                        if count >= seq_len:
-                            selected_count = n
-                            break
-                    indices = range(seq_len - selected_count, seq_len)
-                    indices = list(itertools.combinations(indices, p))
-                    # print(f"p={p}, seq_len={seq_len}, selected_count={selected_count}",)
-                    # print(f"{len(indices)=}")
-                    if len(indices) != seq_len:
-                        # select exactly amount to match sequence length dimension
-                        indices = indices[-seq_len:]
-                    indices = torch.LongTensor(indices)
-                    self._allcombs_index_cache.append((p, indices))
+        if self._allcombs_index_cache is None:
+            self._allcombs_index_cache = []
+            self._allcombs_cache_L = seq_len
+            for p in range(2, self.liquid_degree + 1):
+                selected_count = 1
+                for n in range(2, seq_len):
+                    count = math.comb(n, p)
+                    if count >= seq_len:
+                        selected_count = n
+                        break
+                indices = range(seq_len - selected_count, seq_len)
+                indices = list(itertools.combinations(indices, p))
+                # print(f"p={p}, seq_len={seq_len}, selected_count={selected_count}",)
+                # print(f"{len(indices)=}")
+                if len(indices) != seq_len:
+                    # select exactly amount to match sequence length dimension
+                    indices = indices[-seq_len:]
+                indices = torch.LongTensor(indices)
+                self._allcombs_index_cache.append((p, indices))
 
     def upgrade_degree(self,us,u,i):
+        seq_len = u.size(-1)
         if self.allcombs:
+            if self._allcombs_cache_L != seq_len:
+                self.compute_combs_cache(seq_len)
             p, indices = self._allcombs_index_cache[i]
             us = u[..., indices[:, 0]]
             for j in range(1, p):
@@ -261,23 +264,12 @@ class S4(nn.Module):
         L_kernel = L if self.L is None else min(L, round(self.L / rate))
         k, k_state = self.kernel(L=L_kernel, rate=rate, state=state) # (C H L) (B C H L)
 
-        # self.kernel.B.size() torch.Size([128, 4])
-        # _conj(self.kernel.B).size()        torch.Size([128, 8])
-
-        # k.size() = torch.Size([1, 256, 2048])
-        # k_f.size() = torch.Size([1, 256, 1025])
-        # u_f.size() = torch.Size([64, 256, 1025])
-        # y_f.size() = torch.Size([64, 1, 256, 1025])
-        # y.size() = torch.Size([64, 1, 256, 1024])
-        # k_b_f.size() = torch.Size([1, 256, 2048])
-        # u_corr.size() = torch.Size([64, 256, 1025])
-        #
-        # Convolution
         if self.bidirectional:
             k0, k1 = rearrange(k, '(s c) h l -> s c h l', s=2)
             k = F.pad(k0, (0, L)) \
                     + F.pad(k1.flip(-1), (L, 0)) \
 
+        # Convolution
         if self.shift:
             # Try flip and pad to correct for potential off-by-one
             k_f = torch.fft.rfft(F.pad(k.flip(-1), (L, 0)), n=2*L) # (C H L)
@@ -293,17 +285,16 @@ class S4(nn.Module):
 
             y_sum = y_f
             if self.liquid_kernel == "kb":
+                # Approximates the liquid kernel in the fourier space by the product of K-bar and B
                 k_b = k
                 us = u
                 for i in range(self.liquid_degree-1):
-                    # print(f"{u.size()=}")
-                    # print(f"{us.size()=}")
                     us = self.upgrade_degree(us,u,i)
-                    us = self.lcontract(us)
                     k_b = k_b.unsqueeze(2)
                     B = self.kernel.B.to(u.device).unsqueeze(0).unsqueeze(-1)
                     k_b = contract('abcd,abcd->abd', k_b, B)
-                    u_corr = us.flip(dims=[-1])
+                    u_corr = self.lcontract(us)
+                    u_corr = u_corr.flip(dims=[-1])
                     k_b_f = torch.fft.fft(k_b, n=(L_kernel + L)//2 + 1)  # (C H L)
                     u_corr_f = torch.fft.rfft(u_corr, n=L_kernel + L)  # (B H L)
                     y_corr_f = contract('bhl,chl->bchl', u_corr_f, k_b_f)
@@ -327,8 +318,8 @@ class S4(nn.Module):
             for i in range(self.liquid_degree-1):
                 # print(f"[Liquid={self.liquid}] Generating degree {i+1} input polynomial")
                 us = self.upgrade_degree(us, u, i)
-                us = self.lcontract(us)
-                us_corr = torch.flip(us,[-1])
+                u_corr = self.lcontract(us)
+                us_corr = torch.flip(u_corr,[-1])
                 dB1 = dB.unsqueeze(2)
                 dB2 = dB.unsqueeze(1)
                 dB = (dB1 * dB2).sum(2)
