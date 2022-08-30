@@ -4,22 +4,22 @@ This repository provides implementations and experiments for Liquid S4
 
 ```bash
 # plain S4
-python3 -m train wandb=null experiment=s4-lra-cifar-new
+python3 -m train wandb=null experiment=lra/s4-lra-imdb
 
 # Old direct polynomial B liquid Kernel:
-python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid_kernel=polyb
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb
 # Product of Kbar and B liquid kernel:
-python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid_kernel=kb
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=kb
 
 # both kernel with higher degree:
-python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid_kernel=polyb model.layer.liquid_degree=3
-python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid_kernel=kb model.layer.liquid_degree=3
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb model.layer.liquid_degree=3
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=kb model.layer.liquid_degree=3
 
 # Liquid S4D
-python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid_kernel=polyb model.layer.mode=diag
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb model.layer.mode=diag
 
 # Slightly faster kernel that only uses neighboring terms instead of all combinations
-python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid_kernel=polyb model.layer.allcombs=False
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb model.layer.allcombs=False
 ```
 
 ## Table of Contents
