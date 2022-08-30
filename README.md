@@ -3,6 +3,8 @@
 This repository provides implementations and experiments for Liquid S4
 
 ```bash
+python3 -m train wandb=null experiment=ml/imdb-new model.layer.liquid_kernel=kb
+python3 -m train wandb=null experiment=mm-lra-imdb
 python3 -m train wandb=null experiment=ml/listops # plain S4
 python3 -m train wandb=null experiment=s4-lra-cifar-new # plain S4
 python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid=2 # liquid S4 with 2 terms u(i)*u(j)

@@ -34,14 +34,14 @@ loader:
   batch_size: 8
 
 optimizer:
-  lr: 0.003
+  lr: 0.001
   weight_decay: 0.01
 
 scheduler:
   num_training_steps: 50000
 
 trainer:
-  max_epochs: 24
+  max_epochs: 40
 
 train:
   seed: 2222

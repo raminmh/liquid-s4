@@ -19,6 +19,15 @@ else:
 from src.models.sequence.ss.kernel import SSKernel, _conj
 from src.models.nn import LinearActivation, Activation, DropoutNd
 
+class LeCun(nn.Module):
+    def __init__(self):
+        super(LeCun, self).__init__()
+        self.tanh = nn.Tanh()
+
+    def forward(self, x):
+        return 1.7159 * self.tanh(0.666 * x)
+
+
 class S4(nn.Module):
     def __init__(
             self,
@@ -40,8 +49,10 @@ class S4(nn.Module):
             verbose=False,
             shift=False,
             linear=False,
-            liquid=0,
+            liquid_kernel=None,
+            liquid_degree=2,
             allcombs=True,
+            lcontract=None,
             # SSM Kernel arguments
             **kernel_args,
         ):
@@ -79,14 +90,19 @@ class S4(nn.Module):
         if verbose:
             log.info(f"Constructing S4 (H, N, L) = ({d_model}, {d_state}, {l_max})")
             log = src.utils.train.get_logger(__name__)
-        if liquid == 1:
-            raise ValueError("Illegal argument (liquid=1). Valid options are 0 (vanilla S4) and n>1 (liquid S4 with up to n-term)")
-        if liquid >= 1:
-            log.info(f"Constructing liquid-S4 with degree={liquid}, allcombs={allcombs}")
+        if liquid_degree <= 1:
+            raise ValueError(f"Illegal argument for liquid_degree ({liquid_degree}). Valid options are >= 2")
+        if liquid_kernel is not None:
+            log.info(f"Constructing liquid-S4 with liquid kernel '{liquid_kernel}' and degree {liquid_degree}")
         else:
             log.info(
-                f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid=2 argument)"
+                f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid_degree='polyb'|'kb')"
             )
+        if liquid_kernel not in [None, "polyb","kb"]:
+            raise ValueError(f"Invalid argument for liquid_kernel ('{liquid_kernel}'). Use 'polyb', 'kb'")
+        self.liquid_kernel = liquid_kernel
+        self.liquid_degree = liquid_degree
+
         self.d_model = d_model
         self.H = d_model
         self.N = d_state
@@ -97,7 +113,14 @@ class S4(nn.Module):
         self.shift = shift
         self.linear = linear
         self.linear = linear
-        self.liquid = liquid
+        if lcontract=="lecun":
+            self.lcontract = LeCun()
+        elif lcontract=="tanh":
+            self.lcontract = nn.Tanh()
+        else:
+            self.lcontract = nn.Identity()
+
+
         self.allcombs = allcombs
 
         self.gate = gate
@@ -169,7 +192,42 @@ class S4(nn.Module):
                 weight_norm=weight_norm,
             )
         self._allcombs_index_cache = None
+        self._allcombs_cache_L = None
 
+    def compute_combs_cache(self,seq_len):
+        if self.allcombs:
+            if self._allcombs_index_cache is None:
+                self._allcombs_index_cache = []
+                for p in range(2, self.liquid_degree + 1):
+                    selected_count = 1
+                    for n in range(2, seq_len):
+                        count = math.comb(n, p)
+                        if count >= seq_len:
+                            selected_count = n
+                            break
+                    indices = range(seq_len - selected_count, seq_len)
+                    indices = list(itertools.combinations(indices, p))
+                    # print(f"p={p}, seq_len={seq_len}, selected_count={selected_count}",)
+                    # print(f"{len(indices)=}")
+                    if len(indices) != seq_len:
+                        # select exactly amount to match sequence length dimension
+                        indices = indices[-seq_len:]
+                    indices = torch.LongTensor(indices)
+                    self._allcombs_index_cache.append((p, indices))
+
+    def upgrade_degree(self,us,u,i):
+        if self.allcombs:
+            p, indices = self._allcombs_index_cache[i]
+            us = u[..., indices[:, 0]]
+            for j in range(1, p):
+                breakpoint()
+                us = us * u[..., indices[:, j]]
+            if us.size(-1) != u.size(-1):
+                us = F.pad(us, (0, u.size(-1) - us.size(-1)))
+        else:
+            us_shift = torch.nn.functional.pad(us[..., :-1], (1, 0), "constant", 0)
+            us = us * us_shift
+        return us
 
 
     def forward(self, u, state=None, rate=1.0, lengths=None, **kwargs): # absorbs return_output and transformer src mask
@@ -203,6 +261,17 @@ class S4(nn.Module):
         L_kernel = L if self.L is None else min(L, round(self.L / rate))
         k, k_state = self.kernel(L=L_kernel, rate=rate, state=state) # (C H L) (B C H L)
 
+        # self.kernel.B.size() torch.Size([128, 4])
+        # _conj(self.kernel.B).size()        torch.Size([128, 8])
+
+        # k.size() = torch.Size([1, 256, 2048])
+        # k_f.size() = torch.Size([1, 256, 1025])
+        # u_f.size() = torch.Size([64, 256, 1025])
+        # y_f.size() = torch.Size([64, 1, 256, 1025])
+        # y.size() = torch.Size([64, 1, 256, 1024])
+        # k_b_f.size() = torch.Size([1, 256, 2048])
+        # u_corr.size() = torch.Size([64, 256, 1025])
+        #
         # Convolution
         if self.bidirectional:
             k0, k1 = rearrange(k, '(s c) h l -> s c h l', s=2)
@@ -215,70 +284,66 @@ class S4(nn.Module):
             u_f = torch.fft.rfft(F.pad(u.flip(-1), (L, 0)), n=2*L) # (B H L)
             y_f = contract('bhl,chl->bchl', u_f, k_f) # k_f.unsqueeze(-4) * u_f.unsqueeze(-3) # (B C H L)
             y = torch.fft.irfft(y_f, n=L_kernel+L)[..., L:].flip(-1) # (B C H L)
+            if self.liquid_kernel == "kb":
+                raise NotImplementedError()
         else:
             k_f = torch.fft.rfft(k, n=L_kernel+L) # (C H L)
             u_f = torch.fft.rfft(u, n=L_kernel+L) # (B H L)
             y_f = contract('bhl,chl->bchl', u_f, k_f)
-            y = torch.fft.irfft(y_f, n=L_kernel+L)[..., :L] # (B C H L)
+
+            y_sum = y_f
+            if self.liquid_kernel == "kb":
+                k_b = k
+                us = u
+                for i in range(self.liquid_degree-1):
+                    # print(f"{u.size()=}")
+                    # print(f"{us.size()=}")
+                    us = self.upgrade_degree(us,u,i)
+                    us = self.lcontract(us)
+                    k_b = k_b.unsqueeze(2)
+                    B = self.kernel.B.to(u.device).unsqueeze(0).unsqueeze(-1)
+                    k_b = contract('abcd,abcd->abd', k_b, B)
+                    u_corr = us.flip(dims=[-1])
+                    k_b_f = torch.fft.fft(k_b, n=(L_kernel + L)//2 + 1)  # (C H L)
+                    u_corr_f = torch.fft.rfft(u_corr, n=L_kernel + L)  # (B H L)
+                    y_corr_f = contract('bhl,chl->bchl', u_corr_f, k_b_f)
+                    y_sum = y_sum + y_corr_f
+
+            y = torch.fft.irfft(y_sum, n=L_kernel+L)[..., :L] # (B C H L)
 
         # Compute D term in state space equation - essentially a skip connection
         y = y + contract('bhl,ch->bchl', u, self.D)
-        seq_len = int(y.size(-1))
-        if self._allcombs_index_cache is None:
-            self._allcombs_index_cache = []
-            for p in range(2,self.liquid+1):
-                selected_count = 1
-                for n in range(2,seq_len):
-                    count = math.comb(n,p)
-                    if count >= seq_len:
-                        selected_count = n
-                        break
-                indices = range(seq_len-selected_count,seq_len)
-                indices = list(itertools.combinations(indices, p))
-                # print(f"p={p}, seq_len={seq_len}, selected_count={selected_count}",)
-                # print(f"{len(indices)=}")
-                if len(indices) != seq_len:
-                    # select exactly amount to match sequence length dimension
-                    indices = indices[-seq_len:]
-                indices = torch.LongTensor(indices)
-                self._allcombs_index_cache.append((p,indices))
 
-        dt = torch.exp(self.kernel.log_dt.to(u.device))
-        B = _conj(self.kernel.B).to(u.device)
-        dC = _conj(self.kernel.C).to(u.device)
-        w = _conj(self.kernel.w).to(u.device)
-        dB = torch.diag_embed(1.0 / (1.0 - 0.5 * dt[:, None] * w))  #  (256,64,64)
+        if self.liquid_kernel == "polyb":
+            # Approximates the liquid kernel by computing only the polynomials involving B up to a certain degree
+            dt = torch.exp(self.kernel.log_dt.to(u.device))
+            B = _conj(self.kernel.B).to(u.device)
+            dC = _conj(self.kernel.C).to(u.device)
+            w = _conj(self.kernel.w).to(u.device)
+            dB = torch.diag_embed(1.0 / (1.0 - 0.5 * dt[:, None] * w))  #  (256,64,64)
 
-        dB = dt[:, None] * contract("dab,db->da", dB, B)
-        us = u
-        for i in range(self.liquid-1):
-            # print(f"[Liquid={self.liquid}] Generating degree {i+1} input polynomial")
-            if self.allcombs:
-                p,indices = self._allcombs_index_cache[i]
-                us = u[..., indices[:, 0]]
-                for j in range(1,p):
-                    us = us*u[..., indices[:, j]]
-                if us.size(-1) != u.size(-1):
-                    us = F.pad(us, (0, u.size(-1) - us.size(-1)))
-            else:
-                us_shift = torch.nn.functional.pad(us[..., :-1], (1, 0), "constant", 0)
-                us = us * us_shift
-            us_corr = torch.flip(us,[-1])
-            dB1 = dB.unsqueeze(2)
-            dB2 = dB.unsqueeze(1)
-            dB = (dB1 * dB2).sum(2)
-            dCB = contract("abc,bc->ab", dC, dB).unsqueeze(2)
-            if self.bidirectional:
-                fwd, bwd = dCB.unbind(0)
-                fwd, bwd = fwd.unsqueeze(0), bwd.unsqueeze(0)
-                y = (
-                    y
-                    + (us_corr * fwd).unsqueeze(1).float()
-                    + (us_corr.flip(2) * bwd).unsqueeze(1).float()
-                )
-            else:
+            dB = dt[:, None] * contract("dab,db->da", dB, B)
+            us = u
+            for i in range(self.liquid_degree-1):
+                # print(f"[Liquid={self.liquid}] Generating degree {i+1} input polynomial")
+                us = self.upgrade_degree(us, u, i)
+                us = self.lcontract(us)
+                us_corr = torch.flip(us,[-1])
+                dB1 = dB.unsqueeze(2)
+                dB2 = dB.unsqueeze(1)
+                dB = (dB1 * dB2).sum(2)
+                dCB = contract("abc,bc->ab", dC, dB).unsqueeze(2)
+                if self.bidirectional:
+                    fwd, bwd = dCB.unbind(0)
+                    fwd, bwd = fwd.unsqueeze(0), bwd.unsqueeze(0)
+                    y = (
+                        y
+                        + (us_corr * fwd).unsqueeze(1).float()
+                        + (us_corr.flip(2) * bwd).unsqueeze(1).float()
+                    )
+                else:
 
-                y = y + (us_corr * dCB).unsqueeze(1).float()
+                    y = y + (us_corr * dCB).unsqueeze(1).float()
 
         # Compute state update
         if state is not None:

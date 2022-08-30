@@ -19,8 +19,10 @@ lr:
   A: 0.001
   B: 0.001
 n_ssm: 1
-liquid: 0
-allcombs: false
+liquid_kernel: null
+liquid_degree: 2
+allcombs: true
+lcontract: null
 deterministic: false # Special C init
 l_max: ${oc.select:dataset.__l_max,null} # Grab dataset length if exists, otherwise set to 1 and kernel will automatically resize
 verbose: true

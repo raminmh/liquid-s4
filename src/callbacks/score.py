@@ -27,7 +27,7 @@ def is_better(a,b,metric):
 
 
 def get_important_metric(metrics):
-    important_list = ["test/acc","test/accuracy","test/mse","test/loss","val/acc","val/accuracy","val/mse","val/loss"]
+    important_list = ["test/acc","test/accuracy","test/ppl","test/mse","test/loss","val/acc","val/accuracy","val/ppl","val/mse","val/loss"]
     for m in important_list:
         if m in metrics.keys():
             v = metrics[m]
@@ -58,7 +58,7 @@ class Score(Callback):
 
         metrics = filter(trainer.callback_metrics)
         selected_metric = None
-        look_at_list = ["val/acc","val/accuracy", "val/mse", "val/loss"]
+        look_at_list = ["val/acc","val/accuracy","val/ppl", "val/mse", "val/loss"]
         for m in look_at_list:
             if m in metrics.keys():
                 selected_metric = m
