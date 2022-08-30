@@ -49,6 +49,7 @@ layer = {
     "sru": "src.models.sequence.rnns.sru.SRURNN",
     "lssl": "src.models.sequence.ss.lssl.LSSL",
     "s4": "src.models.sequence.ss.s4.S4",
+    "mmRNN": "src.models.sequence.mm.mmRNN",
     "standalone": "src.models.s4.s4.S4",
     "s4d": "src.models.s4.s4d.S4D",
     "ff": "src.models.sequence.ff.FF",

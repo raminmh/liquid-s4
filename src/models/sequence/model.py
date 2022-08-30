@@ -61,6 +61,7 @@ class SequenceModel(SequenceModule):
         for l, layer in enumerate(layers):
             # Pool at the end of every n_repeat blocks
             pool_cfg = pool if (l+1) % n_repeat == 0 else None
+            print(f"Instantiating layer '{layer}' within block")
             block = SequenceResidualBlock(d, l+1, prenorm=prenorm, dropout=dropout, tie_dropout=tie_dropout, transposed=transposed, layer=layer, residual=residual, norm=norm, pool=pool_cfg)
             _layers.append(block)
             d = block.d_output

@@ -2,13 +2,13 @@
 defaults:
   - /pipeline: wt103
   - /model: s4
-  - override /model/layer: s4s4ff
+#  - override /model/layer: s4s4ff
 
 # Dataset
 dataset:
   test_split: True
 loader:
-  batch_size: 8
+  batch_size: 16
   l_max: 1024
   n_context: 1
   eval:
