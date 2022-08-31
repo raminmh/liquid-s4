@@ -15,6 +15,7 @@ import wandb
 from hydra.utils import get_original_cwd
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers import WandbLogger
+from opt_einsum import contract
 from pytorch_lightning.utilities import rank_zero_only, rank_zero_warn
 from tqdm.auto import tqdm
 
@@ -22,6 +23,9 @@ import src.models.nn.utils as U
 import src.utils as utils
 import src.utils.train
 from src.dataloaders import SequenceDataset  # TODO make registry
+from src.models.sequence import SequenceModel
+from src.models.sequence.block import SequenceResidualBlock
+from src.models.sequence.ss.s4 import S4
 from src.tasks import decoders, encoders, tasks
 from src.utils import registry
 from src.utils.optim.ema import build_ema_optimizer
@@ -648,6 +652,7 @@ def create_trainer(config, **kwargs):
     )
     return trainer
 
+_conj = lambda x: torch.cat([x, x.conj()], dim=-1)
 
 def train(config):
     if config.train.seed is not None:
@@ -666,6 +671,23 @@ def train(config):
         trainer.fit(model)
     if config.train.test:
         trainer.test(model)
+
+    dataset_name = config["dataset"]["_name_"]
+    kernel_name = str(config["model"]["layer"]["liquid_kernel"])
+    dirname = os.path.abspath(__file__).replace("train.py","A_matrix")
+
+    os.makedirs(dirname,exist_ok=True)
+    if isinstance(model.model,SequenceModel):
+        for i,l in enumerate(model.model.layers):
+            if isinstance(l,SequenceResidualBlock):
+                if isinstance(l.layer,S4):
+                    kernel = l.layer.kernel.cuda()
+                    L_kernel = config["dataset"]["l_max"]
+                    k, k_state = kernel(L=L_kernel, rate=1.0, state=None)  # (C H L) (B C H L)
+
+                    A = torch.diag_embed(_conj(kernel.w)) \
+                        - contract("... r p, ... r q -> ... p q", _conj(kernel.P), _conj(kernel.P).conj())
+                    np.savez(file=f"{dirname}/{dataset_name}_{kernel_name}_layer_{i}.npz",A=np.array(A.detach().cpu()),k=np.array(k.detach().cpu()))
 
 
 @hydra.main(config_path="configs", config_name="config.yaml")

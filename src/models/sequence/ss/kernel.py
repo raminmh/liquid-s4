@@ -987,6 +987,7 @@ class SSKernel(nn.Module):
                 )
             else: raise NotImplementedError(f"{mode=} is not valid")
         self.B = B
+        self.P = P
         self.C = C
         self.w = w
         self.log_dt = log_dt

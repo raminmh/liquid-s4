@@ -96,7 +96,7 @@ class S4(nn.Module):
             log.info(f"Constructing liquid-S4 with liquid kernel '{liquid_kernel}' and degree {liquid_degree} (allcombs={allcombs})")
         else:
             log.info(
-                f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid_degree='polyb'|'kb')"
+                f"Using plain S4 (to enable liquid-S4 run with model.layer.liquid_kernel='polyb'|'kb')"
             )
         if liquid_kernel not in [None, "polyb","kb"]:
             raise ValueError(f"Invalid argument for liquid_kernel ('{liquid_kernel}'). Use 'polyb', 'kb'")
