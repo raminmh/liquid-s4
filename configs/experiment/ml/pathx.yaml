@@ -4,54 +4,36 @@ defaults:
   - /model: s4
   - override /scheduler: cosine_warmup
 
-optimizer:
-  _name_: adamw
-  lr: 0.0004
-  weight_decay: 0.03
 scheduler:
-  _name_: cosine_warmup
-  num_warmup_steps: 10000
-  num_training_steps: 500000
-encoder: linear
-decoder:
-  _name_: sequence
-  mode: pool
+  num_training_steps: 500000 # 50 epochs
+  num_warmup_steps: 10000 # 1 epoch
+
 model:
-  layer:
-    _name_: s4
-    d_state: 64
-    channels: 1
-    bidirectional: true
-    activation: gelu
-    postact: glu
-    initializer: null
-    weight_norm: false
-    hyper_act: null
-    dropout: ${..dropout}
-    measure: legs
-    rank: 1
-    dt_min: 0.0001
-    dt_max: 0.2
-    lr: 0.0003
-    mode: nplr
-    n_ssm: 128
-    deterministic: false
-    l_max: ${oc.select:dataset.__l_max,null}
-    verbose: true
-  _name_: model
+  dropout: 0.
+  n_layers: 6
   prenorm: true
-  transposed: true
-  n_layers: 8
-  d_model: 128
-  residual: R
+  d_model: 256
   norm: batch
-  dropout: 0.0
+  layer:
+    d_state: 64
+    lr: 0.0005
+    dt_min: 0.0001
+    dt_max: 0.01
+    measure: legs
+    bidirectional: true
+    postact: glu
+    n_ssm: ${..d_model}
+
 loader:
   batch_size: 16
+
+optimizer:
+  lr: 0.0003
+  weight_decay: 0.05
 
 trainer:
   max_epochs: 50
 
 train:
-  seed: 1112
+  seed: 333
   interval: step

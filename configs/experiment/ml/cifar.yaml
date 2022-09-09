@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - /pipeline: pathfinder
+  - /pipeline: cifar
   - /model: s4
   - override /scheduler: cosine_warmup
 

@@ -22,6 +22,17 @@ python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid_kerne
 python3 -m train wandb=null experiment=s4-lra-cifar-new model.layer.liquid_kernel=polyb model.layer.allcombs=False
 ```
 
+```bash
+if [ ! -d data/imdb ]; then
+  mkdir -p data
+  wget https://www.dropbox.com/s/8sz1eu99ixvtsy8/imdb.zip
+  unzip imdb.zip -d data/
+  rm imdb.zip
+fi
+
+
+```
+
 ## Accessing the matrices A and k
 
 After training of a S4 model. The A and k matrices of the model will be automatically stored in the folder ```A_matrix```.

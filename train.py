@@ -673,7 +673,6 @@ def train(config):
         trainer.test(model)
 
     dataset_name = config["dataset"]["_name_"]
-    kernel_name = str(config["model"]["layer"]["liquid_kernel"])
     dirname = os.path.abspath(__file__).replace("train.py","A_matrix")
 
     os.makedirs(dirname,exist_ok=True)
@@ -681,6 +680,10 @@ def train(config):
         for i,l in enumerate(model.model.layers):
             if isinstance(l,SequenceResidualBlock):
                 if isinstance(l.layer,S4):
+                    kernel_name = str(config["model"]["layer"]["liquid_kernel"])
+                    liquid_degree = str(config["model"]["layer"]["liquid_degree"])
+                    if kernel_name is not None:
+                        kernel_name += f"_deg{liquid_degree}"
                     kernel = l.layer.kernel.cuda()
                     L_kernel = config["dataset"]["l_max"]
                     k, k_state = kernel(L=L_kernel, rate=1.0, state=None)  # (C H L) (B C H L)
