@@ -46,6 +46,7 @@ class Score(Callback):
         super().__init__()
         self._enable = enable
         self._best_metrics =None
+        self._best_test_metrics =None
 
 
     @rank_zero_only
@@ -65,14 +66,29 @@ class Score(Callback):
                 break
         if selected_metric is None:
             print(f"Could not find any monitorable metric! ({list(metrics.keys())})\n")
-            return
-        if self._best_metrics is None:
-            self._best_metrics = metrics
-            print(f"Init metric: {self._best_metrics}\n")
         else:
-            if is_better(metrics[selected_metric],self._best_metrics[selected_metric],selected_metric):
+            if self._best_metrics is None:
                 self._best_metrics = metrics
-                print(f"New best metric: {self._best_metrics}\n")
+                print(f"Init metric: {self._best_metrics}\n")
+            else:
+                if is_better(metrics[selected_metric],self._best_metrics[selected_metric],selected_metric):
+                    self._best_metrics = metrics
+                    print(f"New best metric: {self._best_metrics}\n")
+
+        test_look_at_list = ["test/acc","test/accuracy","test/ppl", "test/mse", "test/loss"]
+        selected_test_metric = None
+        for m in test_look_at_list:
+            if m in metrics.keys():
+                selected_test_metric = m
+                break
+        if selected_test_metric is not None:
+            if self._best_test_metrics is None:
+                self._best_test_metrics = metrics
+            else:
+                if is_better(metrics[selected_test_metric],self._best_test_metrics[selected_test_metric],selected_test_metric):
+                    self._best_test_metrics = metrics
+
+
 
     # @rank_zero_only
     # def on_test_epoch_end(self, trainer: Trainer, pl_module: LightningModule,) -> None:
@@ -95,6 +111,8 @@ class Score(Callback):
             m = get_important_metric(self._best_metrics)
             cmd_line = " ".join(sys.argv[1:])
             f.write(f"{m} python3 train.py {cmd_line} # {self._best_metrics}")
+            if self._best_test_metrics is not None:
+                f.write(f" (best test epoch: {self._best_test_metrics})")
             f.write("\n")
 
         print(f"{dirname}global_summary.txt updated")

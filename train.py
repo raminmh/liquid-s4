@@ -685,13 +685,14 @@ def train(config):
                     if kernel_name is not None:
                         kernel_name += f"_deg{liquid_degree}"
                     kernel = l.layer.kernel.cuda()
-                    L_kernel = config["dataset"]["l_max"]
+                    L_kernel = model.hparams["model"]["layer"]["l_max"]
                     k, k_state = kernel(L=L_kernel, rate=1.0, state=None)  # (C H L) (B C H L)
 
                     A = torch.diag_embed(_conj(kernel.w)) \
                         - contract("... r p, ... r q -> ... p q", _conj(kernel.P), _conj(kernel.P).conj())
-                    np.savez(file=f"{dirname}/{dataset_name}_{kernel_name}_layer_{i}.npz",A=np.array(A.detach().cpu()),k=np.array(k.detach().cpu()))
-
+                    filename = f"{dirname}/{dataset_name}_{kernel_name}_layer_{i}.npz"
+                    np.savez(file=filename,A=np.array(A.detach().cpu()),k=np.array(k.detach().cpu()))
+                    print(f"Saved A and K matrix in '{filename}'")
 
 @hydra.main(config_path="configs", config_name="config.yaml")
 def main(config: OmegaConf):
