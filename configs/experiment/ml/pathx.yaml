@@ -28,11 +28,11 @@ loader:
   batch_size: 8
 
 optimizer:
-  lr: 0.0002
+  lr: 0.001
   weight_decay: 0.05
 
 trainer:
-  max_epochs: 50
+  max_epochs: 60
 
 train:
   seed: 333
