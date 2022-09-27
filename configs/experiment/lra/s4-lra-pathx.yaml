@@ -12,7 +12,7 @@ model:
   dropout: 0.
   n_layers: 6
   prenorm: true
-  d_model: 256
+  d_model: 320
   norm: batch
   layer:
     d_state: 64
@@ -20,19 +20,19 @@ model:
     dt_min: 0.0001
     dt_max: 0.1
     measure: legs
-    bidirectional: true
+    bidirectional: False
     postact: glu
-    n_ssm: 256
+    n_ssm: ${..d_model}
 
 loader:
-  batch_size: 16
+  batch_size: 8
 
 optimizer:
-  lr: 0.0005
+  lr: 0.001
   weight_decay: 0.05
 
 trainer:
-  max_epochs: 50
+  max_epochs: 60
 
 train:
   seed: 1112
