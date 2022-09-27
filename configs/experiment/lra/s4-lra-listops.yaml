@@ -5,21 +5,21 @@ defaults:
   - override /scheduler: cosine_warmup
 
 model:
-  dropout: 0.
-  n_layers: 8
+  dropout: 0.01
+  n_layers: 9
   d_model: 128
-  prenorm: false
+  prenorm: True
   norm: batch
   layer:
-    d_state: 64
+    d_state: 7
     lr:
       dt: null
-      A: 0.001
-      B: 0.001
-    dt_min: 0.001
-    dt_max: 0.1
+      A: 0.0009
+      B: 0.0009
+    dt_min: 0.002
+    dt_max: 0.2
     measure: legs
-    bidirectional: true
+    bidirectional: False
     postact: glu
     n_ssm: ${..d_model}
 
@@ -27,11 +27,11 @@ decoder:
   mode: pool
 
 loader:
-  batch_size: 50
+  batch_size: 12
 
 optimizer:
-  lr: 0.01
-  weight_decay: 0.05
+  lr: 0.002
+  weight_decay: 0.03
 
 scheduler:
   num_training_steps: 80000
