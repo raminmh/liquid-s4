@@ -1,5 +1,5 @@
 # @package _global_
-# Should get to around 96.5%
+# Should get to around 96.7%
 defaults:
   - /pipeline: sc
   - /model: s4
@@ -12,20 +12,29 @@ model:
   d_model: 128
   norm: batch
   layer:
-    d_state: 64
-    bidirectional: true
+    d_state: 7
+    lr:
+      dt: null
+      A: 0.001
+      B: 0.001
+    dt_min: 0.002
+    dt_max: 0.2
+    measure: legs
+    bidirectional: false
     postact: glu
-    n_ssm: 2
+    n_ssm: ${..d_model}
+
 
 optimizer:
-  lr: 0.01
+  lr: 0.008
   weight_decay: 0.05
 
 loader:
-  batch_size: 16
+  batch_size: 10
 
 trainer:
-  max_epochs: 40
+  max_epochs: 50
+  gpus: 1
 
 scheduler:
   num_training_steps: 200000
