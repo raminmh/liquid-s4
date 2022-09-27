@@ -21,7 +21,7 @@ model:
     lr: 0.001
     bidirectional: true
     postact: glu
-    n_ssm: 2
+    n_ssm: ${..d_model}
 
 decoder:
   mode: pool
@@ -30,8 +30,8 @@ loader:
   batch_size: 32
 
 optimizer:
-  lr: 0.01
-  weight_decay: 0.05
+  lr: 0.01 # set lr to 0.005 for HR task.
+  weight_decay: 0.01
 
 trainer:
   max_epochs: 500
