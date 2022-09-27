@@ -12,13 +12,13 @@ model:
   prenorm: false
   norm: layer
   layer:
-    d_state: 64
+    d_state: 512
     lr:
       dt: null
       A: 0.001
       B: 0.001
-    dt_min: 0.001
-    dt_max: 0.1
+    dt_min: 0.002
+    dt_max: 0.2
     measure: legs
     bidirectional: true
     postact: glu
@@ -32,7 +32,7 @@ loader:
 
 optimizer:
   lr: 0.01
-  weight_decay: 0.05
+  weight_decay: 0.03
 
 trainer:
   max_epochs: 200
