@@ -20,15 +20,15 @@ model:
     dt_min: 0.001
     dt_max: 0.1
     measure: legs
-    bidirectional: true
+    bidirectional: False
     postact: glu
-    n_ssm: 256
+    n_ssm: ${..d_model}
 
 decoder:
   mode: last
 
 loader:
-  batch_size: 64
+  batch_size: 4
 
 optimizer:
   lr: 0.004
