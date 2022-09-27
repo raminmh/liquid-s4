@@ -9,7 +9,7 @@ scheduler:
   num_warmup_steps: 2500 # 1 epoch
 
 model:
-  dropout: 0.
+  dropout: 0.2
   n_layers: 6
   prenorm: true
   d_model: 256
@@ -23,15 +23,15 @@ model:
     dt_min: 0.001
     dt_max: 0.1
     measure: legs
-    bidirectional: true
+    bidirectional: False
     postact: glu
-    n_ssm: 256
+    n_ssm: ${..d_model}
 
 loader:
-  batch_size: 64
+  batch_size: 16
 
 optimizer:
-  lr: 0.01
+  lr: 0.005
   weight_decay: 0.05
 
 trainer:
