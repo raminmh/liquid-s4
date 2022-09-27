@@ -13,7 +13,7 @@ model:
   layer:
     bidirectional: true
     postact: glu
-    n_ssm: 2
+    n_ssm: ${..d_model}
 
 loader:
   batch_size: 50
