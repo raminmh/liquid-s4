@@ -8,6 +8,8 @@ This repository provides implementations of the Liquid S4 state-space models. Th
 This repository requires Python 3.8+ and Pytorch 1.9+.  
 Other packages are listed in `requirements.txt`.
 
+`pip3 install -r requirement.txt`
+
 To install the Custom Cauchy Kernel (more efficient) developed by [Gu et al. 2022](https://github.com/HazyResearch/state-spaces):
 ```bash
 cd extensions/cauchy/
