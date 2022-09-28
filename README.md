@@ -1,6 +1,9 @@
 # Liquid State Space Models ([Paper](https://arxiv.org/abs/2209.12951))
 
-This repository provides implementations of the Liquid S4 state-space models. The repository is a recent fork of the S4 repo (https://github.com/HazyResearch/state-spaces). It includes the Liquid-S4 KB and PB kernels.
+This repository provides the implementation of Liquid S4 state-space models. Liquid-S4 takes state-spaces models to another level by utilizing a linearized version of [liquid neural networks](https://github.com/raminmh/liquid_time_constant_networks) at its core. Read the preprint for more details:
+https://arxiv.org/abs/2209.12951
+
+The repository is a recent fork of the S4 repo (https://github.com/HazyResearch/state-spaces). It includes the Liquid-S4 KB and PB kernels.
 
 ## Setup
 
