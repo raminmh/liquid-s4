@@ -1,56 +1,30 @@
-# Liquid State Space Models
+# Liquid State Space Models ([Paper](https://arxiv.org/abs/2209.12951))
 
 This repository provides implementations of the Liquid S4 state-space models. The repository is a recent fork of the S4 repo (https://github.com/HazyResearch/state-spaces). It includes the Liquid-S4 KB and PB kernels.
 
 ## Setup
 
 ### Requirements
-This repository requires Python 3.8+ and Pytorch 1.9+.
-This repository requires Python 3.8+ and Pytorch 1.9+.
+This repository requires Python 3.8+ and Pytorch 1.9+.  
 Other packages are listed in `requirements.txt`.
 
+To install the Custom Cauchy Kernel (more efficient) developed by [Gu et al. 2022](https://github.com/HazyResearch/state-spaces):
+```bash
+cd extensions/cauchy/
+python3 setup.py install
+```
 
-## Run Liquid-S4 models
+You can also skip installing the custom cauchy kernel, and use the kernel provided by the [PyKeOps Library](https://www.kernel-operations.io/keops/python/installation.html). If you `pip3 install -r requirement.txt`, this package will be installed. 
+
+## Datasets:
+
+sCIFAR is downloaded automatically when running a training job.  
+Speech Commands dataset is downloaded automatically when running a training job.  
+All Long Range Arena (LRA) (except IMDB and Cifar which are auto-downloaded) tasks could be downloaded directly from ths gziped file: [LRA Full Dataset](https://storage.googleapis.com/long-range-arena/lra_release.gz).  
+After downloading the LRA task, organize a `data/` folder with the following directory structure:
 
 ```bash
-# plain S4
-python3 -m train wandb=null experiment=lra/s4-lra-imdb
-
-# Old direct polynomial B liquid Kernel:
-python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb
-# Product of Kbar and B liquid kernel:
-python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=kb
-
-# both kernel with higher degree:
-python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb model.layer.liquid_degree=3
-python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=kb model.layer.liquid_degree=3
-
-# Liquid S4D
-python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb model.layer.mode=diag
-
-# Slightly faster kernel that only uses neighboring terms instead of all combinations
-python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb model.layer.allcombs=False
-```
-
-
-### Data
-
-#### Datasets and Dataloaders
-All logic for creating and loading datasets is in `src/dataloaders`.
-This folder may include old and experimental datasets.
-The datasets that we consider core are located in `src/dataloaders/datasets.py`.
-
-
-#### Data
-The raw data should be organized as follows.
-The data path can be configured by the environment variable `DATA_PATH`, or defaults to `./data` by default, where `.` is the top level directory of this repository (e.g. 'state-spaces').
-
-Most of the dataloaders download their datasets automatically if not found.
-External datasets include Long Range Arena (LRA), which can be downloaded from their [GitHub page](https://github.com/google-research/long-range-arena),
-and the WikiText-103 language modeling dataset, which can be downloaded by the `getdata.sh` script from the [Transformer-XL codebase](https://github.com/kimiyoung/transformer-xl).
-These external datasets should be organized as follows:
-```
-DATA_PATH/
+$data/
   pathfinder/
     pathfinder32/
     pathfinder64/
@@ -58,36 +32,55 @@ DATA_PATH/
     pathfinder256/
   aan/
   listops/
-  wt103/
 ```
-Fine-grained control over the data directory is allowed, e.g. if the LRA ListOps files are located in `/home/lra/listops-1000/`, you can pass in `+dataset.data_dir=/home/lra/listops-1000` on the command line
 
-### Cauchy Kernel using Pykeops
+If the IMDB dataset did not get downloaded, you can run the following script to download it: [src/dataloaders/imdb_dataset.sh](https://github.com/raminmh/liquid-s4/blob/main/src/dataloaders/imdb_dataset.sh) This bash script places the imdb dataset into a proper 
 
-This version is provided by the [pykeops library](https://www.kernel-operations.io/keops/index.html).
-Installation usually works out of the box with `pip install pykeops==1.5 cmake` which are provided in the requirements file.
+## Train Liquid-S4 Models
 
-Note that running in a Colab requires installing a different pip package; instructions can be found in the pykeops documentation.
+```bash
+# plain S4
+python3 -m train wandb=null experiment=lra/s4-lra-imdb
 
-## S4 Experiments
+# Liquid-S4 PB Kernel: (PB kernels are faster and perform better than KB)
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb
+# liquid-S4 KB Kernel:
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=kb
 
-This section describes how to use the latest S4 model and reproduce experiments immediately.
-More detailed descriptions of the infrastructure are in the subsequent sections.
+# Increase Liquid Order:
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=polyb model.layer.liquid_degree=3
+python3 -m train wandb=null experiment=lra/s4-lra-imdb model.layer.liquid_kernel=kb model.layer.liquid_degree=3
 
-### Structured State Space (S4)
-
-
-
-### Long Range Arena (LRA)
+```
 
 
-### Optimizer Hyperparameters
+The default config files are all included in the `config/` folder. To run each experiment change the flag `experiment=` to any of the following YAML files:  
+
+```bash
+lra/s4-lra-listops # Long Range Arena: Listops
+lra/s4-lra-imdb # Long Range Arena: IMDB Character Level Sentiment Classification (text)
+lra/s4-lra-cifar # Long Range Arena: Sequential CIFAR (image)
+lra/s4-lra-aan # Long Range Arena: AAN (Retreival)
+lra/s4-lra-pathfinder # Long Range Arena: Pathfinder
+lra/s4-lra-pathx # Long Range Arena: Path-x
+
+sc/s4-sc  # Speech Commands Recognition Full Dataset
+
+bidmc/s4-bidmc # BIDMC Heart Rate (HR), Raspiratory Rate (RR), and Blood Oxygen Saturation (SpO2)
+
+
+#Example: 
+python3 -m train wandb=null experiment=lra/s4-lra-listops model.layer.liquid_kernel=polyb model.layer.liquid_degree=2
+
+```
+
+### Optimizer Hyperparameters from [S4 Repo](https://github.com/HazyResearch/state-spaces)
 
 One notable difference in this codebase is that some S4 parameters use different optimizer hyperparameters. In particular, the SSM kernel is particularly sensitive to the A, B, and dt parameters, so the optimizer settings for these parameters are usually fixed to learning rate 0.001 and weight decay 0.
 
 Our logic for setting these parameters can be found in the `OptimModule` class under `src/models/sequence/ss/kernel.py` and the corresponding optimizer hook in `SequenceLightningModule.configure_optimizers` under `train.py`.
 
-## Training
+## Training from [S4 Repo](https://github.com/HazyResearch/state-spaces):
 
 The core training infrastructure of this repository is based on [Pytorch-Lightning](https://pytorch-lightning.readthedocs.io/en/latest/) with a configuration scheme based on [Hydra](https://hydra.cc/docs/intro/).
 The structure of this integration largely follows the Lightning+Hydra integration template described in https://github.com/ashleve/lightning-hydra-template.
@@ -105,45 +98,21 @@ decoder: defines a Module that interfaces between model backbone and targets
 task: specifies loss and metrics
 ```
 
-
-### Hydra
+### Hydra from [S4 Repo](https://github.com/HazyResearch/state-spaces)
 
 It is recommended to read the Hydra documentation to fully understand the configuration framework. For help launching specific experiments, please file an Issue.
 
-### Registries
+### Registries from [S4 Repo](https://github.com/HazyResearch/state-spaces)
 
 This codebase uses a modification of the hydra `instantiate` utility that provides shorthand names of different classes, for convenience in configuration and logging.
 The mapping from shorthand to full path can be found in `src/utils/registry.py`.
 
-### WandB
+### WandB from [S4 Repo](https://github.com/HazyResearch/state-spaces)
 
 Logging with [WandB](https://wandb.ai/site) is built into this repository.
 In order to use this, simply set your `WANDB_API_KEY` environment variable, and change the `wandb.project` attribute of `configs/config.yaml` (or pass it on the command line `python -m train .... wandb.project=s4`).
 
 Set `wandb=null` to turn off WandB logging.
-
-
-
-## Overall Repository Structure
-```
-configs/         config files for model, data pipeline, training loop, etc.
-data/            default location of raw data
-extensions/      CUDA extension for Cauchy kernel
-src/             main source code for models, datasets, etc.
-  callbacks/     training loop utilities (e.g. checkpointing)
-  dataloaders/   data loading logic
-  models/        model backbones
-    baselines/   misc. baseline models
-    functional/  mathematical utilities
-    nn/          standalone modules and components
-    hippo/       core HiPPO logic
-    sequence/    sequence model backbones and layers including RNNs and S4/LSSL
-  tasks/         encoder/decoder modules to interface between data and model backbone
-  utils/
-sashimi/         SaShiMi README and additional code (generation, metrics, MTurk)
-train.py         training loop entrypoint
-```
-
 
 
 ## Citation
@@ -152,7 +121,7 @@ train.py         training loop entrypoint
 @article{hasani2022liquid,
   title={Liquid Structural State-Space Models},
   author={Hasani, Ramin and Lechner, Mathias and Wang, Tsun-Huang and Chahine, Makram and Amini, Alexander and Rus, Daniela},
-  journal={arXiv preprint arXiv:},
+  journal={arXiv preprint arXiv:2209.12951},
   year={2022}
 }
 
