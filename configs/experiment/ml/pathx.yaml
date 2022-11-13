@@ -16,7 +16,7 @@ model:
   norm: batch
   layer:
     d_state: 64
-    lr: 0.0005
+    lr: 0.0006
     dt_min: 0.0001
     dt_max: 0.01
     measure: legs
@@ -32,7 +32,7 @@ optimizer:
   weight_decay: 0.05
 
 trainer:
-  max_epochs: 60
+  max_epochs: 100
 
 train:
   seed: 333

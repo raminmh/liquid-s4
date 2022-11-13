@@ -10,6 +10,7 @@ from pytorch_lightning import Callback, Trainer, LightningModule
 from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.utilities.parsing import AttributeDict
 from pytorch_lightning.utilities.types import STEP_OUTPUT
+import numpy as np
 
 def filter(metrics):
     filtered = {}
@@ -47,7 +48,19 @@ class Score(Callback):
         self._enable = enable
         self._best_metrics =None
         self._best_test_metrics =None
+        self._epoch_start_time = 0
+        self._epoch_times = []
 
+
+    @rank_zero_only
+    def on_train_epoch_start(self,trainer, pl_module):
+        self._epoch_start_time = time.time()
+
+    @rank_zero_only
+    def on_train_epoch_end(self,trainer, pl_module):
+        elapsed = time.time()-self._epoch_start_time
+        self._epoch_times.append(elapsed)
+        print(f"Epoch took {elapsed/60:0.2f} minutes")
 
     @rank_zero_only
     def on_validation_epoch_end(self, trainer: Trainer, pl_module: LightningModule,) -> None:
@@ -107,6 +120,14 @@ class Score(Callback):
         # dirname = os.path.dirname(os.path.abspath(__file__))
         dirname = os.path.abspath(__file__).replace("src/callbacks/score.py","")
         # abspath = os.path.abspath("global_summary.txt")
+        if len(self._epoch_times)>1:
+            with open(f"{dirname}time_summary.txt", "a") as f:
+                epoch_times = np.array(self._epoch_times)[1:]/60 # remove first (warmup epoch) and convert to minutes
+                cmd_line = " ".join(sys.argv[1:])
+                f.write(f"{np.mean(epoch_times):0.2f} +- {np.std(epoch_times):0.2f} minutes # python3 train.py {cmd_line}")
+                f.write("\n")
+            print(f"{dirname}time_summary.txt updated")
+
         with open(f"{dirname}global_summary.txt", "a") as f:
             m = get_important_metric(self._best_metrics)
             cmd_line = " ".join(sys.argv[1:])
