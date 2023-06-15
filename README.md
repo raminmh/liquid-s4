@@ -1,7 +1,10 @@
 	
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/liquid-structural-state-space-models/spo2-estimation-on-bidmc)](https://paperswithcode.com/sota/spo2-estimation-on-bidmc?p=liquid-structural-state-space-models)
+
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/liquid-structural-state-space-models/heart-rate-estimation-on-bidmc)](https://paperswithcode.com/sota/heart-rate-estimation-on-bidmc?p=liquid-structural-state-space-models)
+
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/liquid-structural-state-space-models/speech-recognition-on-speech-commands-2)](https://paperswithcode.com/sota/speech-recognition-on-speech-commands-2?p=liquid-structural-state-space-models)
+
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/liquid-structural-state-space-models/long-range-modeling-on-lra)](https://paperswithcode.com/sota/long-range-modeling-on-lra?p=liquid-structural-state-space-models)
 
 
