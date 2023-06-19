@@ -11,7 +11,7 @@ scheduler:
 model:
   dropout: 0.
   n_layers: 6
-  prenorm: true
+  prenorm: false # p edit
   d_model: 256
   norm: batch
   layer:
@@ -20,12 +20,12 @@ model:
     dt_min: 0.0001
     dt_max: 0.01
     measure: legs
-    bidirectional: true
+    bidirectional: false # p edit
     postact: glu
     n_ssm: 256
 
 loader:
-  batch_size: 16
+  batch_size: 4 # from 16 p edit
 
 optimizer:
   lr: 0.0005
