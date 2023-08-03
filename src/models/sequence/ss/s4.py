@@ -308,7 +308,7 @@ class S4(nn.Module):
 
         # Compute D term in state space equation - essentially a skip connection
         y = y + contract('bhl,ch->bchl', u, self.D)
-
+        # TODO:Figure out how to implement polyb kernel as a jax kernel to place into existing S4 JAX code
         if self.liquid_kernel == "polyb":
             # Approximates the liquid kernel by computing only the polynomials involving B up to a certain degree
             dt = torch.exp(self.kernel.log_dt.to(u.device))
