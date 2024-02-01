@@ -1,7 +1,7 @@
 numpy
 scipy
 pandas
-sklearn
+scikit-learn
 matplotlib
 tqdm
 rich
